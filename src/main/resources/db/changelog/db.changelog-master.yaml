@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2024-06-11-create-table-channels
+      author: Andrey Fedotov
+      comment: create table channels
+      changes:
+        - sqlFile:
+            path: ../sql/0001-create-table-channels.sql
+            relativeToChangelogFile: true
+  - changeSet:
+      id: 2024-06-11-create-table-users
+      author: Andrey Fedotov
+      comment: create table users
+      changes:
+        - sqlFile:
+            path: ../sql/0002-create-table-users.sql
+            relativeToChangelogFile: true
+  - changeSet:
+      id: 2024-06-11-create-table-reactions
+      author: Andrey Fedotov
+      comment: create table reactions
+      changes:
+        - sqlFile:
+            path: ../sql/0003-create-table-reactions.sql
+            relativeToChangelogFile: true
+  - changeSet:
+      id: 2024-06-11-create-table-ignores
+      author: Andrey Fedotov
+      comment: create table ignores
+      changes:
+        - sqlFile:
+            path: ../sql/0004-create-table-ignores.sql
+            relativeToChangelogFile: true
+  - changeSet:
+      id: 2024-06-11-create-table-points
+      author: Andrey Fedotov
+      comment: create table points
+      changes:
+        - sqlFile:
+            path: ../sql/0005-create-table-points.sql
+            relativeToChangelogFile: true
