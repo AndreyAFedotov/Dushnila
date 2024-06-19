@@ -51,7 +51,7 @@ public class MessagesService {
     private final PointRepo pointRepo;
     private final ReactionRepo reactionRepo;
     private final IgnoreRepo ignoreRepo;
-    private final ImportService importService;
+    //private final ImportService importService;
     private final SpellerService spellerService;
 
     public LastMessage onUpdate(Update update, BaseBotProperties properties) {
@@ -115,7 +115,7 @@ public class MessagesService {
             case APPROVE -> handleAdminApproveCommand(lastMessage, command);
             case DAPPROVE -> handleAdminDapproveCommand(lastMessage, command);
             case CHANNELS -> handleAdminChannelsCommand(lastMessage);
-            case IMPORT -> handleAdminImportCommand();
+            //case IMPORT -> handleAdminImportCommand();
             case UPTIME -> handleAdminUptimeCommand(lastMessage, properties);
             default -> lastMessage.setResponse("Команда не распознана");
         }
@@ -397,13 +397,13 @@ public class MessagesService {
         lastMessage.setResponse(result.toString());
     }
 
-    private void handleAdminImportCommand() {
-        importService.doChannelImport();
-        importService.doUserImport();
-        importService.doIgnoreImport();
-        importService.doReplaceImport();
-        importService.doPointImport();
-    }
+//    private void handleAdminImportCommand() {
+//        importService.doChannelImport();
+//        importService.doUserImport();
+//        importService.doIgnoreImport();
+//        importService.doReplaceImport();
+//        importService.doPointImport();
+//    }
 
     private void handleAdminUptimeCommand(LastMessage lastMessage, BaseBotProperties properties) {
         Duration uptime = Duration.between(properties.getStartTime(), LocalDateTime.now());
