@@ -108,7 +108,7 @@ public class ServiceUtil {
                         newReaction.getTextTo()
                 ));
 
-        log.info("Добавлена замена <{} -> {}> для канала <{}> пользователем <{}>",
+        log.info("Replace created <{} -> {}> for channel <{}> by user <{}>",
                 newReaction.getTextFrom(),
                 newReaction.getTextTo(),
                 lastMessage.getChannel().getChatName(),

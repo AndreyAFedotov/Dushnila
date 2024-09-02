@@ -12,7 +12,7 @@
 
 	<groupId>com.iceekb</groupId>
 	<artifactId>dushnila</artifactId>
-	<version>0.6.4</version>
+	<version>0.6.6</version>
 	<name>Dushnila</name>
 	<description>Another Telegram bot</description>
 
@@ -90,15 +90,15 @@
 	<profiles>
 		<profile>
 			<id>dev</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
 			<properties>
 				<spring.profiles.active>dev</spring.profiles.active>
 			</properties>
 		</profile>
 		<profile>
 			<id>prod</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<properties>
 				<spring.profiles.active>prod</spring.profiles.active>
 			</properties>

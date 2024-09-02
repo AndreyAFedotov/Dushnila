@@ -3,6 +3,10 @@ spring:
     name: Dushnila
   main:
     web-application-type: none
+    banner-mode: off
+  output:
+    ansi:
+      enabled: detect
   jpa:
     hibernate:
       ddl-auto: none
@@ -28,7 +32,12 @@ logging:
   level:
     root: INFO
   file:
-    name: dushnila_log.txt
+    name: logs/${bot.name}_log.txt
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      file-name-pattern: "${LOG_FILE}.%d{yyyy-MM}.%i.log"
+      max-history: 5
   pattern:
     console: "%clr([%d{yyyy-MM-dd HH:mm:ss}]){green} %clr([%-5level]){magenta} %clr([%thread]){yellow} %message%n"
     file: "%clr([%d{yyyy-MM-dd HH:mm:ss}]){green} %clr([%-5level]){magenta} %clr([%thread]){yellow} %message%n"

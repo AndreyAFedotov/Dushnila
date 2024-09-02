@@ -18,7 +18,6 @@ import com.iceekb.dushnila.message.enums.MessageValidationError;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.util.ServiceUtil;
 import com.iceekb.dushnila.message.util.TextUtil;
-import com.iceekb.dushnila.message.util.importdb.ImportService;
 import com.iceekb.dushnila.properties.BaseBotProperties;
 import com.iceekb.dushnila.speller.SpellerService;
 import lombok.RequiredArgsConstructor;
@@ -51,7 +50,6 @@ public class MessagesService {
     private final PointRepo pointRepo;
     private final ReactionRepo reactionRepo;
     private final IgnoreRepo ignoreRepo;
-    //private final ImportService importService;
     private final SpellerService spellerService;
 
     public LastMessage onUpdate(Update update, BaseBotProperties properties) {
@@ -115,7 +113,6 @@ public class MessagesService {
             case APPROVE -> handleAdminApproveCommand(lastMessage, command);
             case DAPPROVE -> handleAdminDapproveCommand(lastMessage, command);
             case CHANNELS -> handleAdminChannelsCommand(lastMessage);
-            //case IMPORT -> handleAdminImportCommand();
             case UPTIME -> handleAdminUptimeCommand(lastMessage, properties);
             default -> lastMessage.setResponse("Команда не распознана");
         }
@@ -219,10 +216,7 @@ public class MessagesService {
             case CIGNORE -> createIgnore(lastMessage);
             case DIGNORE -> deleteIgnore(lastMessage);
             case LIGNORE -> listIgnore(lastMessage);
-            default -> {
-                log.error("Unknown command: {}", command);
-                throw new IllegalStateException("Unexpected Command value: " + command);
-            }
+            default -> throw new IllegalStateException("Unexpected Command value: " + command);
         }
     }
 
@@ -251,7 +245,7 @@ public class MessagesService {
         } else {
             ignoreRepo.deleteById(ignore.getId());
             lastMessage.setResponse("Удалено: " + ignore.getWord());
-            log.info("Удаление игнора <{}> для канала <{}> пользователем <{}>",
+            log.info("Ignore removed <{}> for channel <{}> by user <{}>",
                     ignore.getWord(),
                     lastMessage.getChannel().getChatName(),
                     lastMessage.getUser().getNickName());
@@ -269,7 +263,7 @@ public class MessagesService {
             Ignore ignoreResult = ServiceUtil.createNewIgnore(lastMessage, data);
             lastMessage.setResponse("Добавлено: " + ignoreResult.getWord());
             ignoreRepo.save(ignoreResult);
-            log.info("Создание игнора <{}> для канала <{}> пользователем <{}>",
+            log.info("Ignore created <{}> for channel <{}> by user <{}>",
                     ignoreResult.getWord(),
                     lastMessage.getChannel().getChatName(),
                     lastMessage.getUser().getNickName());
@@ -301,7 +295,7 @@ public class MessagesService {
         } else {
             reactionRepo.deleteById(reaction.getId());
             lastMessage.setResponse("Удалено");
-            log.info("Удаление замены <{} -> {}> для канала <{}> пользователем <{}>",
+            log.info("Replace deleted <{} -> {}> for channel <{}> by user <{}>",
                     reaction.getTextFrom(),
                     reaction.getTextTo(),
                     lastMessage.getChannel().getChatName(),
@@ -323,7 +317,7 @@ public class MessagesService {
                             reaction.getTextTo())
             );
             reactionRepo.save(reaction);
-            log.info("Обновление замены <{} -> {}> для канала <{}> пользователем <{}>",
+            log.info("Replace updated <{} -> {}> for channel <{}> by user <{}>",
                     reaction.getTextFrom(),
                     reaction.getTextTo(),
                     lastMessage.getChannel().getChatName(),
@@ -367,7 +361,7 @@ public class MessagesService {
             } else {
                 channel.setApproved(ChannelApproved.APPROVED);
                 channelRepo.save(channel);
-                log.info("Одобрен канал {}", channel.getChatName());
+                log.info("Channel is approved {}", channel.getChatName());
                 lastMessage.setResponse("Канал одобрен");
             }
         }
@@ -380,7 +374,7 @@ public class MessagesService {
                 channel.setApproved(ChannelApproved.REJECTED);
                 channelRepo.save(channel);
                 lastMessage.setResponse("Одобрение снято");
-                log.info("Снято одобрение с канала {}", channel.getChatName());
+                log.info("Channel unapproved {}", channel.getChatName());
             } else {
                 lastMessage.setResponse("Канал еще не одобрен: " + channel.getApproved().getDesc());
             }
@@ -396,14 +390,6 @@ public class MessagesService {
                 .append("\n"));
         lastMessage.setResponse(result.toString());
     }
-
-//    private void handleAdminImportCommand() {
-//        importService.doChannelImport();
-//        importService.doUserImport();
-//        importService.doIgnoreImport();
-//        importService.doReplaceImport();
-//        importService.doPointImport();
-//    }
 
     private void handleAdminUptimeCommand(LastMessage lastMessage, BaseBotProperties properties) {
         Duration uptime = Duration.between(properties.getStartTime(), LocalDateTime.now());
