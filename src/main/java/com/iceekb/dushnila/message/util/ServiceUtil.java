@@ -10,19 +10,21 @@ import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
 
-@UtilityClass
 @Slf4j
 public class ServiceUtil {
     public static final String TO = "to";
     public static final String FROM = "from";
     public static final String PARAM = "param";
+
+    private ServiceUtil(){
+
+    }
 
     public static Channel channelAnalysis(Channel channel, LastMessage lastMessage) {
         channel.setLastMessage(LocalDateTime.now());
@@ -74,11 +76,12 @@ public class ServiceUtil {
     }
 
     public static User createNewUser(LastMessage lastMessage) {
+        var now = LocalDateTime.now();
         User user = User.builder()
                 .tgId(lastMessage.getUserTgId())
                 .nickName(lastMessage.getUserName())
-                .firstMessage(LocalDateTime.now())
-                .lastMessage(LocalDateTime.now())
+                .firstMessage(now)
+                .lastMessage(now)
                 .build();
 
         lastMessage.setUser(user);

@@ -4,6 +4,7 @@ import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.responses.PersonalResponses;
 import com.iceekb.dushnila.message.responses.SpellerResponses;
 import lombok.experimental.UtilityClass;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -77,19 +78,16 @@ public class TextUtil {
     }
 
     public static String nextAutoMessage(ResponseTypes type) {
-        switch (type) {
-            case SPELLER: {
-                int size = SpellerResponses.data.size();
-                int rnd = random.nextInt(size);
-                return SpellerResponses.data.get(rnd);
-            }
-            case PERSONAL: {
-                int size = PersonalResponses.data.size();
-                int rnd = random.nextInt(size);
-                return PersonalResponses.data.get(rnd);
-            }
-            default:
-                return null;
-        }
+        return switch (type) {
+            case SPELLER -> getRandomMessage(SpellerResponses.data);
+            case PERSONAL -> getRandomMessage(PersonalResponses.data);
+            default -> StringUtils.EMPTY;
+        };
+    }
+
+    private static String getRandomMessage(List<String> messages) {
+        int size = messages.size();
+        int rnd = random.nextInt(size);
+        return messages.get(rnd);
     }
 }
