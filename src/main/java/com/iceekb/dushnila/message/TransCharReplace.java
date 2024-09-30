@@ -15,7 +15,20 @@ public class TransCharReplace {
         initializeTransData();
     }
 
-    public void initializeTransData() {
+    public String modifyTransString(String message) {
+        return message.chars()
+                .mapToObj(c -> String.valueOf(getChar((char) c)))
+                .collect(Collectors.joining());
+    }
+
+    public boolean isTrans(Map<String, String> pairs) {
+        long targetPairsCount = pairs.entrySet().stream()
+                .filter(pair -> isEnglishChar(pair.getKey().charAt(0)) && !isEnglishChar(pair.getValue().charAt(0)))
+                .count();
+        return targetPairsCount >= pairs.size() * 0.7;
+    }
+
+    private void initializeTransData() {
         addMapping('Q', 'Й');
         addMapping('q', 'й');
         addMapping('W', 'Ц');
@@ -87,28 +100,15 @@ public class TransCharReplace {
         addMapping('/', '.');
     }
 
+    private boolean isEnglishChar(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
+
     private void addMapping(char from, char to) {
         transData.put(from, to);
     }
 
-    public char getChar(char chr) {
+    private char getChar(char chr) {
         return transData.getOrDefault(chr, chr);
-    }
-
-    public String modifyTransString(String message) {
-        return message.chars()
-                .mapToObj(c -> String.valueOf(getChar((char) c)))
-                .collect(Collectors.joining());
-    }
-
-    public boolean isTrans(Map<String, String> pairs) {
-        long targetPairsCount = pairs.entrySet().stream()
-                .filter(pair -> isEnglishChar(pair.getKey().charAt(0)) && !isEnglishChar(pair.getValue().charAt(0)))
-                .count();
-        return targetPairsCount >= pairs.size() * 0.7;
-    }
-
-    private boolean isEnglishChar(char c) {
-        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
     }
 }
