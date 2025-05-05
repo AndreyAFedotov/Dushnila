@@ -3,7 +3,7 @@ spring:
     name: Dushnila
   main:
     web-application-type: none
-    banner-mode: off
+    banner-mode: CONSOLE
   output:
     ansi:
       enabled: detect
@@ -27,17 +27,6 @@ bot:
   token: "BOT TOKEN"
   admin: "BOT ADMIN TELEGRAM USER ID"
   adminMail: "ADMIN EMAIL"
-
-logging:
-  level:
-    root: INFO
-  file:
-    name: logs/${bot.name}_log.txt
-  logback:
-    rollingpolicy:
-      max-file-size: 50MB
-      file-name-pattern: "${LOG_FILE}.%d{yyyy-MM}.%i.log"
-      max-history: 5
-  pattern:
-    console: "%clr([%d{yyyy-MM-dd HH:mm:ss}]){green} %clr([%-5level]){magenta} %clr([%thread]){yellow} %message%n"
-    file: "%clr([%d{yyyy-MM-dd HH:mm:ss}]){green} %clr([%-5level]){magenta} %clr([%thread]){yellow} %message%n"
+  connectTimeout: 15
+  readTimeout: 15
+  writeTimeout: 15

@@ -3,14 +3,11 @@ package com.iceekb.dushnila.message.util;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.responses.PersonalResponses;
 import com.iceekb.dushnila.message.responses.SpellerResponses;
-import lombok.experimental.UtilityClass;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-@UtilityClass
 public class TextUtil {
     public static final String FORMAT_ERROR = "Ошибочный формат команды";
     public static final String ERROR = "error";
@@ -33,7 +30,10 @@ public class TextUtil {
             /uptime - Uptime
             """;
 
-    Random random = new Random();
+    static Random random = new Random();
+
+    private TextUtil() {
+    }
 
     public static Map<String, String> line2param(String text) {
         text = text.replace("«", "\"");
@@ -81,7 +81,6 @@ public class TextUtil {
         return switch (type) {
             case SPELLER -> getRandomMessage(SpellerResponses.data);
             case PERSONAL -> getRandomMessage(PersonalResponses.data);
-            default -> StringUtils.EMPTY;
         };
     }
 

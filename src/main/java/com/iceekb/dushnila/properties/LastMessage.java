@@ -4,6 +4,8 @@ import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.User;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
 import com.iceekb.dushnila.message.enums.UpdateType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,8 +19,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
+@Builder
 @Slf4j
 public class LastMessage {
     private Channel channel;
@@ -33,7 +37,7 @@ public class LastMessage {
     private boolean isPersonalFromAdmin;
     private String response;
     private boolean isValid;
-    private List<MessageValidationError> validationErrors = new ArrayList<>();
+    private List<MessageValidationError> validationErrors;
     private boolean isError;
 
     public LastMessage(Update update, BaseBotProperties properties) {
@@ -44,6 +48,7 @@ public class LastMessage {
             isValid = true;
         }
 
+        validationErrors = new ArrayList<>();
         isError = false;
         channelTgId = update.getMessage().getChatId();
         userTgId = update.getMessage().getFrom().getId();

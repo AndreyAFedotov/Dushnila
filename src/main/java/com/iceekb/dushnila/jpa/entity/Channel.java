@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "channels")
@@ -49,4 +50,15 @@ public class Channel {
     @Column(name = "approved")
     @Convert(converter = ChannelApprovedConverter.class)
     private ChannelApproved approved;
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Channel channel)) return false;
+        return Objects.equals(id, channel.id) && Objects.equals(tgId, channel.tgId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, tgId);
+    }
 }

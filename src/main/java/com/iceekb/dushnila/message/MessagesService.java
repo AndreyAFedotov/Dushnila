@@ -11,7 +11,6 @@ import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import com.iceekb.dushnila.jpa.repo.PointRepo;
 import com.iceekb.dushnila.jpa.repo.ReactionRepo;
 import com.iceekb.dushnila.jpa.repo.UserRepo;
-import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
@@ -19,6 +18,7 @@ import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.util.ServiceUtil;
 import com.iceekb.dushnila.message.util.TextUtil;
 import com.iceekb.dushnila.properties.BaseBotProperties;
+import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.speller.SpellerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,10 +30,11 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -84,21 +85,25 @@ public class MessagesService {
     }
 
     private void onChannelMessage(LastMessage lastMessage) {
-        if (isPingPong(lastMessage)) return;
+        try {
+            if (isPingPong(lastMessage)) return;
 
-        checkMessageAccess(lastMessage);
-        if (shouldReturn(lastMessage)) return;
+            checkMessageAccess(lastMessage);
+            if (shouldReturn(lastMessage)) return;
 
-        checkCommands(lastMessage);
-        if (shouldReturn(lastMessage)) return;
+            checkCommands(lastMessage);
+            if (shouldReturn(lastMessage)) return;
 
-        deleteIgnoreAndUsers(lastMessage);
-        if (StringUtils.isBlank(lastMessage.getReceivedMessage())) return;
+            deleteIgnoreAndUsers(lastMessage);
+            if (StringUtils.isBlank(lastMessage.getReceivedMessage())) return;
 
-        checkReaction(lastMessage);
-        if (shouldReturn(lastMessage)) return;
+            checkReaction(lastMessage);
+            if (shouldReturn(lastMessage)) return;
 
-        speller(lastMessage);
+            speller(lastMessage);
+        } catch (RuntimeException e) {
+            log.error("Unexpected error: {}", e.getMessage());
+        }
     }
 
     private boolean shouldReturn(LastMessage lastMessage) {
@@ -120,15 +125,35 @@ public class MessagesService {
 
     private void checkReaction(LastMessage lastMessage) {
         List<Reaction> reactions = reactionRepo.findAllByChannelId(lastMessage.getChannel().getId());
-        List<String> words = new LinkedList<>(Arrays.stream(lastMessage.getReceivedMessage().split(" ")).toList());
-        StringJoiner finalMessage = new StringJoiner(". ");
+        Map<String, String> reactionMap = reactions.stream()
+                .collect(Collectors.toMap(
+                        reaction -> reaction.getTextFrom().toLowerCase(),
+                        Reaction::getTextTo,
+                        (existing, replacement) -> existing));
+
+        // Обрабатываем сообщение
+        String[] words = lastMessage.getReceivedMessage()
+                .replaceAll("\\p{Punct}", " ")  // Заменяем знаки препинания на пробелы
+                .replaceAll("\\s+", " ")        // Заменяем множественные пробелы на один
+                .trim()
+                .split("\\s+");                 // Разбиваем по пробелам
+
+        // Обрабатываем слова и собираем результат
+        StringJoiner result = new StringJoiner(". ");
         for (String word : words) {
-            reactions.stream()
-                    .filter(reaction -> reaction.getTextFrom().equalsIgnoreCase(word))
-                    .findFirst()
-                    .ifPresent(reaction -> finalMessage.add(reaction.getTextTo()));
+            if (StringUtils.isNotBlank(word)) {
+                // Ищем реакцию (без учета регистра)
+                String reaction = reactionMap.getOrDefault(word.toLowerCase(), null);
+                if (reaction != null) {
+                    result.add(reaction);
+                }
+            }
         }
-        lastMessage.setResponse(finalMessage.toString());
+
+        String response = result.toString();
+        if (response != null && !response.isEmpty()) {
+            lastMessage.setResponse(response);
+        }
     }
 
     private void speller(LastMessage lastMessage) {
@@ -153,27 +178,23 @@ public class MessagesService {
     }
 
     private void deleteIgnoreAndUsers(LastMessage lastMessage) {
-        // Ignored
-        List<Ignore> ignores = ignoreRepo.findAllByChatId(lastMessage.getChannel().getId());
-        List<String> words = new LinkedList<>(Arrays.stream(lastMessage.getReceivedMessage().split(" ")).toList());
-        StringJoiner finalMessage = new StringJoiner(" ");
-        for (String word : words) {
-            if (ignores.stream().noneMatch(ignore -> ignore.getWord().equals(word))) {
-                finalMessage.add(word);
-            }
-        }
-        String message = finalMessage.toString().trim();
-        lastMessage.setReceivedMessage(message);
-        if (message.isEmpty()) return;
-        // Usernames
-        StringJoiner joiner = new StringJoiner(" ");
-        List.of(message.split(" ")).forEach(username -> {
-            if (StringUtils.isNotBlank(username) && username.charAt(0) != '@') {
-                joiner.add(username);
-            }
-        });
-        message = joiner.toString().trim();
-        lastMessage.setReceivedMessage(message);
+        Long chatId = lastMessage.getChannel().getId();
+        Set<String> ignoredWords = ignoreRepo.findAllByChatId(chatId).stream()
+                .map(Ignore::getWord)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        String processedMessage = Arrays.stream(lastMessage.getReceivedMessage()
+                        .replaceAll("\\p{Punct}&&[^@]", " ")  // Удаляем все знаки препинания, КРОМЕ @
+                        .replaceAll("\\s+", " ")        // Нормализуем пробелы
+                        .trim()
+                        .split("\\s+"))                // Разбиваем по пробелам
+                .filter(word -> !word.isEmpty())        // Удаляем пустые строки
+                .filter(word -> !ignoredWords.contains(word.toLowerCase())) // Фильтруем игнорируемые слова
+                .filter(word -> word.charAt(0) != '@')  // Фильтруем юзернеймы
+                .collect(Collectors.joining(" "));     // Собираем обратно в строку
+
+        lastMessage.setReceivedMessage(processedMessage);
     }
 
 
@@ -448,7 +469,7 @@ public class MessagesService {
     private boolean isPingPong(LastMessage lastMessage) {
         if (lastMessage.getReceivedMessage().equalsIgnoreCase("ping")) {
             lastMessage.setResponse("pong");
-            log.info(">>>>> Ping-pong action! :)");
+            log.info(">>>>> Ping-pong action by {}! :)", lastMessage.getUserName());
             return true;
         }
         return false;

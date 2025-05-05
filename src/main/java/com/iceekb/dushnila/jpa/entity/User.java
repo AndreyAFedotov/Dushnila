@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "users")
@@ -39,4 +40,15 @@ public class User {
 
     @Column(name = "last_message")
     private LocalDateTime lastMessage;
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof User user)) return false;
+        return Objects.equals(id, user.id) && Objects.equals(tgId, user.tgId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, tgId);
+    }
 }

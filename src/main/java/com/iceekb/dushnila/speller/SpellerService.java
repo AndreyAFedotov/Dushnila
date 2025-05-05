@@ -7,18 +7,17 @@ import com.iceekb.dushnila.message.TransCharReplace;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.util.TextUtil;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.ResponseEntity;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
+@Data
 public class SpellerService {
 
     private static final Integer ERROR_WORDS_LIMIT = 5;
@@ -36,51 +35,88 @@ public class SpellerService {
     private static final Integer CONNECTION_TIMEOUT = 2;
     private static final Integer READ_TIMEOUT = 2;
 
-    private final RestTemplate restTemplate = restTemplate(new RestTemplateBuilder());
-    private final TransCharReplace transCR;
+    private WebClient webClient;
+    private TransCharReplace transCR;
+    private ObjectMapper objectMapper;
+
+    public SpellerService(TransCharReplace transCR, ObjectMapper objectMapper) {
+        this.transCR = transCR;
+        this.objectMapper = objectMapper;
+        this.webClient = WebClient.builder()
+                .baseUrl(SPELLER_URL)
+                .build();
+    }
 
     public LastMessage speller(LastMessage lastMessage) {
         String message = lastMessage.getReceivedMessage();
 
         try {
-            List<SpellerIncomingDataWord> data = getData(message);
+            List<SpellerIncomingDataWord> data = getData(message).block();
             Map<String, String> pairs = extractPairs(data);
 
             if (!pairs.isEmpty()) {
                 handlePossibleTransposition(lastMessage, message, pairs, transCR);
             }
-            if (!lastMessage.getResponse().isEmpty()) return lastMessage;
+            if (lastMessage.getResponse() != null && !lastMessage.getResponse().isEmpty()) {
+                return lastMessage;
+            }
 
             if (!pairs.isEmpty()) {
                 handleErrors(lastMessage, pairs);
             }
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             log.error("Speller error!", e);
             lastMessage.setError(true);
         }
         return lastMessage;
     }
 
-    private List<SpellerIncomingDataWord> getData(String text) throws JsonProcessingException {
+    private Mono<List<SpellerIncomingDataWord>> getData(String text) {
+        if (text == null || text.isEmpty()) {
+            return Mono.just(List.of());
+        }
+
         String query = text.replace(" ", "+");
-        String url = SPELLER_URL + "?options=" + SPELLER_OPTIONS + "&text=" + query;
 
-        try {
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .queryParam("options", SPELLER_OPTIONS)
+                        .queryParam("text", query)
+                        .build())
+                .exchangeToMono(this::getListMono)
+                .timeout(Duration.ofSeconds(READ_TIMEOUT))
+                .onErrorResume(e -> {
+                    log.error("Error querying Speller API: {}", e.getMessage());
+                    return Mono.just(List.of());
+                });
+    }
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            SpellerIncomingDataWord[] data = objectMapper.readValue(response.getBody(), SpellerIncomingDataWord[].class);
-
-            return filterData(data);
-        } catch (RestClientException | IOException e) {
-            log.error("Error querying Speller API: {}", e.getMessage(), e);
-            return new ArrayList<>();
+    @NotNull
+    private Mono<List<SpellerIncomingDataWord>> getListMono(ClientResponse response) {
+        if (response.statusCode().equals(HttpStatus.OK)) {
+            return response.bodyToMono(String.class)
+                    .map(body -> {
+                        try {
+                            SpellerIncomingDataWord[] data = objectMapper.readValue(body, SpellerIncomingDataWord[].class);
+                            return filterData(data);
+                        } catch (JsonProcessingException e) {
+                            log.error("Error parsing Speller response", e);
+                            return List.of();
+                        }
+                    });
+        } else {
+            log.error("Speller API returned status: {}", response.statusCode());
+            return Mono.just(List.of());
         }
     }
 
     private Map<String, String> extractPairs(List<SpellerIncomingDataWord> data) {
+        if (data == null || data.isEmpty()) return Map.of();
         return data.stream()
-                .collect(Collectors.toMap(SpellerIncomingDataWord::getWord, word -> word.getS().get(0)));
+                .collect(Collectors.toMap(
+                        SpellerIncomingDataWord::getWord,
+                        word -> word.getS().get(0)
+                ));
     }
 
     private void handlePossibleTransposition(LastMessage lastMessage,
@@ -126,12 +162,5 @@ public class SpellerService {
             }
         }
         return result;
-    }
-
-    private RestTemplate restTemplate(RestTemplateBuilder restTemplateBuilder) {
-        return restTemplateBuilder
-                .setConnectTimeout(Duration.of(CONNECTION_TIMEOUT, ChronoUnit.SECONDS))
-                .setReadTimeout(Duration.of(READ_TIMEOUT, ChronoUnit.SECONDS))
-                .build();
     }
 }
