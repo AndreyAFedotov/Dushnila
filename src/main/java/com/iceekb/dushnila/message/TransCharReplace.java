@@ -98,6 +98,7 @@ public class TransCharReplace {
         addMapping('.', 'ю');
         addMapping('?', ',');
         addMapping('/', '.');
+        addMapping('&', '?');
     }
 
     private boolean isEnglishChar(char c) {

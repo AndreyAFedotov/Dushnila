@@ -27,7 +27,7 @@ public enum ChannelApproved {
 
     public static ChannelApproved of(Character id) {
         return Optional.ofNullable(idMap.get(id))
-                .orElseThrow(() -> new RuntimeException("No nz people present by: " + id));
+                .orElseThrow(() -> new RuntimeException("No present by: " + id));
     }
 
     public String getName() {
