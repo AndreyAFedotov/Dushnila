@@ -43,6 +43,7 @@ public class LastMessage {
     public LastMessage(Update update, BaseBotProperties properties) {
         if (!isTextMessage(update)) {
             isValid = false;
+            validationErrors = List.of(MessageValidationError.TYPE);
             return;
         } else {
             isValid = true;

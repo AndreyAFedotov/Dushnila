@@ -79,9 +79,13 @@ public class MessagesService {
     }
 
     private void logValidationErrors(LastMessage lastMessage) {
-        lastMessage.getValidationErrors().stream()
-                .filter(error -> error != MessageValidationError.TYPE)
-                .forEach(error -> log.error(error.getLabel()));
+        try {
+            lastMessage.getValidationErrors().stream()
+                    .filter(error -> error != MessageValidationError.TYPE)
+                    .forEach(error -> log.error(error.getLabel()));
+        } catch (Exception e) {
+            log.error("The message is not valid. But the validator's message is err: {}", e.getMessage());
+        }
     }
 
     private void onChannelMessage(LastMessage lastMessage) {
