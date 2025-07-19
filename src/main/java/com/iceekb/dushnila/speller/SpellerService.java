@@ -6,7 +6,7 @@ import com.iceekb.dushnila.message.TransCharReplace;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.message.responses.AutoResponseService;
-import com.iceekb.dushnila.properties.LastMessage;
+import com.iceekb.dushnila.properties.LastMessageTxt;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +49,7 @@ public class SpellerService {
                 .build();
     }
 
-    public LastMessage speller(LastMessage lastMessage) {
+    public LastMessageTxt speller(LastMessageTxt lastMessage) {
         String message = lastMessage.getReceivedMessage();
 
         try {
@@ -121,7 +121,7 @@ public class SpellerService {
                 ));
     }
 
-    private void handlePossibleTransposition(LastMessage lastMessage,
+    private void handlePossibleTransposition(LastMessageTxt lastMessage,
                                              String message,
                                              Map<String, String> pairs,
                                              TransCharReplace transCR) {
@@ -130,7 +130,7 @@ public class SpellerService {
         }
     }
 
-    private void handleErrors(LastMessage lastMessage, Map<String, String> pairs) {
+    private void handleErrors(LastMessageTxt lastMessage, Map<String, String> pairs) {
         StringBuilder result = new StringBuilder();
         int wordCount = 0;
 

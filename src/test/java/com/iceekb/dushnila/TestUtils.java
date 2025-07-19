@@ -3,7 +3,7 @@ package com.iceekb.dushnila;
 import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.User;
 import com.iceekb.dushnila.jpa.enums.ChannelApproved;
-import com.iceekb.dushnila.properties.LastMessage;
+import com.iceekb.dushnila.properties.LastMessageTxt;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -13,8 +13,8 @@ public abstract class TestUtils {
     private static final LocalDateTime AT_DATE_TIME = LocalDateTime.of(2020, 1, 1, 0, 0);
     public static final String FORMAT_ERROR = "Ошибочный формат команды";
 
-    protected static LastMessage createMessage() {
-        return LastMessage.builder()
+    protected static LastMessageTxt createMessage() {
+        return LastMessageTxt.builder()
                 .channelName("Test Chat Name on Message")
                 .channelTgId(2L)
                 .userTgId(4L)

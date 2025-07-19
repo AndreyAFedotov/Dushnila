@@ -5,7 +5,6 @@ import com.iceekb.dushnila.jpa.entity.Ignore;
 import com.iceekb.dushnila.jpa.entity.Point;
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import com.iceekb.dushnila.jpa.entity.User;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
 import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import com.iceekb.dushnila.jpa.repo.PointRepo;
@@ -19,7 +18,7 @@ import com.iceekb.dushnila.message.responses.AutoResponseService;
 import com.iceekb.dushnila.message.util.ServiceUtil;
 import com.iceekb.dushnila.message.util.TextUtil;
 import com.iceekb.dushnila.properties.BaseBotProperties;
-import com.iceekb.dushnila.properties.LastMessage;
+import com.iceekb.dushnila.properties.LastMessageTxt;
 import com.iceekb.dushnila.speller.SpellerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +26,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +43,13 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class MessagesService {
+    private final static List<AdminCommand> OK_COMMANDS = List.of(
+            AdminCommand.APPROVE,
+            AdminCommand.DAPPROVE,
+            AdminCommand.CHANNELS,
+            AdminCommand.UPTIME
+    );
+
     public static final String ERROR = "error";
     public static final String PARAM = "param";
     public static final String TO = "to";
@@ -55,8 +63,8 @@ public class MessagesService {
     private final SpellerService spellerService;
     private final AutoResponseService responseService;
 
-    public LastMessage onUpdate(Update update, BaseBotProperties properties) {
-        LastMessage lastMessage = new LastMessage(update, properties);
+    public LastMessageTxt onUpdate(Update update, BaseBotProperties properties) {
+        LastMessageTxt lastMessage = new LastMessageTxt(update, properties);
 
         if (lastMessage.isValid()) {
             handleValidMessage(lastMessage, properties);
@@ -67,11 +75,11 @@ public class MessagesService {
         return lastMessage;
     }
 
-    private void handleValidMessage(LastMessage lastMessage, BaseBotProperties properties) {
+    private void handleValidMessage(LastMessageTxt lastMessage, BaseBotProperties properties) {
         if (lastMessage.isPersonal()) {
             if (lastMessage.isPersonalFromAdmin()) {
                 lastMessage.setChannelName("PERSONAL");
-                onPersonalMessageFromAdmin(lastMessage, properties);
+                onPersonalMessageFromAdmin(lastMessage);
             } else {
                 onPersonalMessage(lastMessage, properties);
             }
@@ -80,7 +88,7 @@ public class MessagesService {
         }
     }
 
-    private void logValidationErrors(LastMessage lastMessage) {
+    private void logValidationErrors(LastMessageTxt lastMessage) {
         try {
             lastMessage.getValidationErrors().stream()
                     .filter(error -> error != MessageValidationError.TYPE)
@@ -90,7 +98,7 @@ public class MessagesService {
         }
     }
 
-    private void onChannelMessage(LastMessage lastMessage) {
+    private void onChannelMessage(LastMessageTxt lastMessage) {
         try {
             if (isPingPong(lastMessage)) return;
 
@@ -112,24 +120,33 @@ public class MessagesService {
         }
     }
 
-    private boolean shouldReturn(LastMessage lastMessage) {
+    private boolean shouldReturn(LastMessageTxt lastMessage) {
         return StringUtils.isNotBlank(lastMessage.getResponse()) || lastMessage.isError();
     }
 
-    private void onPersonalMessageFromAdmin(LastMessage lastMessage, BaseBotProperties properties) {
-        AdminCommand command = ServiceUtil.getAdminCommand(lastMessage);
-
-        switch (command) {
-            case HELP -> handleAdminHelpCommand(lastMessage);
-            case APPROVE -> handleAdminApproveCommand(lastMessage, command);
-            case DAPPROVE -> handleAdminDapproveCommand(lastMessage, command);
-            case CHANNELS -> handleAdminChannelsCommand(lastMessage);
-            case UPTIME -> handleAdminUptimeCommand(lastMessage, properties);
-            default -> lastMessage.setResponse("Команда не распознана");
+    private void onPersonalMessageFromAdmin(LastMessageTxt lastMessage) {
+        if (!lastMessage.getReceivedMessage().equals("/help") && !lastMessage.getReceivedMessage().equals("/start")) {
+            lastMessage.setResponse("Команда не распознана (/start)");
+            return;
         }
+
+        InlineKeyboardMarkup markupInline = Arrays.stream(AdminCommand.values())
+                .filter(OK_COMMANDS::contains)
+                .map(cmd -> InlineKeyboardButton.builder()
+                        .text(cmd.getLabel())
+                        .callbackData(cmd.toString())
+                        .build())
+                .map(InlineKeyboardRow::new)
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        InlineKeyboardMarkup::new
+                ));
+
+        lastMessage.setMenu(markupInline);
+        lastMessage.setResponse("Меню администратора");
     }
 
-    private void checkReaction(LastMessage lastMessage) {
+    private void checkReaction(LastMessageTxt lastMessage) {
         List<Reaction> reactions = reactionRepo.findAllByChannelId(lastMessage.getChannel().getId());
         Map<String, String> reactionMap = reactions.stream()
                 .collect(Collectors.toMap(
@@ -162,14 +179,14 @@ public class MessagesService {
         }
     }
 
-    private void speller(LastMessage lastMessage) {
+    private void speller(LastMessageTxt lastMessage) {
         lastMessage = spellerService.speller(lastMessage);
         if (StringUtils.isNotBlank(lastMessage.getResponse())) {
             addPoint(lastMessage);
         }
     }
 
-    private void addPoint(LastMessage lastMessage) {
+    private void addPoint(LastMessageTxt lastMessage) {
         Point point = pointRepo.findPointsForChannelIdAndUserId(
                 lastMessage.getChannel().getId(),
                 lastMessage.getUser().getId()
@@ -183,7 +200,7 @@ public class MessagesService {
         }
     }
 
-    private void deleteIgnoreAndUsers(LastMessage lastMessage) {
+    private void deleteIgnoreAndUsers(LastMessageTxt lastMessage) {
         Long chatId = lastMessage.getChannel().getId();
         Set<String> ignoredWords = ignoreRepo.findAllByChatId(chatId).stream()
                 .map(Ignore::getWord)
@@ -204,7 +221,7 @@ public class MessagesService {
     }
 
 
-    private void checkMessageAccess(LastMessage lastMessage) {
+    private void checkMessageAccess(LastMessageTxt lastMessage) {
         // Channel
         Channel channelResult = retrieveOrCreateChannel(lastMessage);
         channelRepo.save(channelResult);
@@ -215,25 +232,25 @@ public class MessagesService {
         }
     }
 
-    private Channel retrieveOrCreateChannel(LastMessage lastMessage) {
+    private Channel retrieveOrCreateChannel(LastMessageTxt lastMessage) {
         Long channelTgId = ServiceUtil.checkChannelTgId(lastMessage.getChannelTgId());
         Channel channel = channelRepo.findByTgId(channelTgId);
         return (channel == null) ? ServiceUtil.createNewChannel(lastMessage) : ServiceUtil.channelAnalysis(channel, lastMessage);
     }
 
-    private User retrieveOrCreateUser(LastMessage lastMessage) {
+    private User retrieveOrCreateUser(LastMessageTxt lastMessage) {
         User user = userRepo.findByTgId(lastMessage.getUserTgId());
         return (user == null) ? ServiceUtil.createNewUser(lastMessage) : ServiceUtil.userAnalysis(user, lastMessage);
     }
 
-    private void checkCommands(LastMessage lastMessage) {
+    private void checkCommands(LastMessageTxt lastMessage) {
         ChatCommand command = ServiceUtil.getCommand(lastMessage);
         if (command != null) {
             doCommandAction(command, lastMessage);
         }
     }
 
-    private void doCommandAction(ChatCommand command, LastMessage lastMessage) {
+    private void doCommandAction(ChatCommand command, LastMessageTxt lastMessage) {
         switch (command) {
             case STAT -> createStat(lastMessage);
             case HELP -> createHelp(lastMessage);
@@ -247,7 +264,7 @@ public class MessagesService {
         }
     }
 
-    private void listIgnore(LastMessage lastMessage) {
+    private void listIgnore(LastMessageTxt lastMessage) {
         List<Ignore> words = ignoreRepo.findAllByChatId(lastMessage.getChannel().getId());
 
         if (!words.isEmpty()) {
@@ -262,7 +279,7 @@ public class MessagesService {
         }
     }
 
-    private void deleteIgnore(LastMessage lastMessage) {
+    private void deleteIgnore(LastMessageTxt lastMessage) {
         Map<String, String> data = getLine1Param(lastMessage);
         if (data.containsKey(ERROR)) return;
 
@@ -279,7 +296,7 @@ public class MessagesService {
         }
     }
 
-    private void createIgnore(LastMessage lastMessage) {
+    private void createIgnore(LastMessageTxt lastMessage) {
         Map<String, String> data = getLine1Param(lastMessage);
         if (data.containsKey(ERROR)) return;
 
@@ -297,7 +314,7 @@ public class MessagesService {
         }
     }
 
-    private void listReplace(LastMessage lastMessage) {
+    private void listReplace(LastMessageTxt lastMessage) {
         List<Reaction> pairs = reactionRepo.findAllByCatTgId(lastMessage.getChannel().getTgId());
         if (!pairs.isEmpty()) {
             StringBuilder sb = new StringBuilder();
@@ -312,7 +329,7 @@ public class MessagesService {
 
     }
 
-    private void deleteReplace(LastMessage lastMessage) {
+    private void deleteReplace(LastMessageTxt lastMessage) {
         Map<String, String> data = getLine1Param(lastMessage);
         if (data.containsKey(ERROR)) return;
 
@@ -330,7 +347,7 @@ public class MessagesService {
         }
     }
 
-    private void createReplace(LastMessage lastMessage) {
+    private void createReplace(LastMessageTxt lastMessage) {
         Map<String, String> data = getLine2Param(lastMessage);
         if (data.containsKey(ERROR)) return;
 
@@ -357,11 +374,11 @@ public class MessagesService {
         reactionRepo.save(newReaction);
     }
 
-    private void createHelp(LastMessage lastMessage) {
+    private void createHelp(LastMessageTxt lastMessage) {
         lastMessage.setResponse(TextUtil.HELP_MESSAGE);
     }
 
-    private void createStat(LastMessage lastMessage) {
+    private void createStat(LastMessageTxt lastMessage) {
         List<Point> points = pointRepo.findPointsForChannelId(lastMessage.getChannel().getId());
 
         if (points != null && !points.isEmpty()) {
@@ -376,85 +393,11 @@ public class MessagesService {
         }
     }
 
-    private void handleAdminHelpCommand(LastMessage lastMessage) {
-        lastMessage.setResponse(TextUtil.ADMIN_MENU);
-    }
-
-    private void handleAdminApproveCommand(LastMessage lastMessage, AdminCommand command) {
-        Channel channel = checkAdmChannel(lastMessage, command);
-        if (channel != null) {
-            if (channel.getApproved() == ChannelApproved.APPROVED) {
-                lastMessage.setResponse("Канал уже одобрен");
-            } else {
-                channel.setApproved(ChannelApproved.APPROVED);
-                channelRepo.save(channel);
-                log.info("Channel is approved {}", channel.getChatName());
-                lastMessage.setResponse("Канал одобрен");
-            }
-        }
-    }
-
-    private void handleAdminDapproveCommand(LastMessage lastMessage, AdminCommand command) {
-        Channel channel = checkAdmChannel(lastMessage, command);
-        if (channel != null) {
-            if (channel.getApproved() == ChannelApproved.APPROVED || channel.getApproved() == ChannelApproved.WAITING) {
-                channel.setApproved(ChannelApproved.REJECTED);
-                channelRepo.save(channel);
-                lastMessage.setResponse("Одобрение снято");
-                log.info("Channel unapproved {}", channel.getChatName());
-            } else {
-                lastMessage.setResponse("Канал еще не одобрен: " + channel.getApproved().getDesc());
-            }
-        }
-    }
-
-    private void handleAdminChannelsCommand(LastMessage lastMessage) {
-        List<Channel> channels = channelRepo.findAll();
-        StringBuilder result = new StringBuilder("Список каналов:\n");
-        channels.forEach(channel -> result.append(channel.getChatName())
-                .append(" --- ")
-                .append(channel.getApproved())
-                .append("\n"));
-        lastMessage.setResponse(result.toString());
-    }
-
-    private void handleAdminUptimeCommand(LastMessage lastMessage, BaseBotProperties properties) {
-        Duration uptime = Duration.between(properties.getStartTime(), LocalDateTime.now());
-        String uptimeStr = setUptimeLine(uptime);
-        lastMessage.setResponse(uptimeStr);
-    }
-
-    private String setUptimeLine(Duration uptime) {
-        long days = uptime.toDaysPart();
-        long hours = uptime.toHoursPart();
-        long minutes = uptime.toMinutesPart();
-        long seconds = uptime.toSecondsPart();
-
-        return String.format("Bot uptime: %03d days %02d:%02d:%02d", days, hours, minutes, seconds);
-    }
-
-
-    private Channel checkAdmChannel(LastMessage lastMessage, AdminCommand command) {
-        String message = lastMessage.getReceivedMessage().replaceFirst("/", "").trim();
-        message = message.replace(command.toString().toLowerCase(), "").trim();
-        if (message.isEmpty()) {
-            lastMessage.setResponse("Не верное количество параметров");
-            return null;
-        }
-
-        Channel channel = channelRepo.findByChatName(message);
-        if (channel == null) {
-            lastMessage.setResponse("Канал не найден");
-            return null;
-        }
-        return channel;
-    }
-
-    private void onPersonalMessage(LastMessage lastMessage, BaseBotProperties properties) {
+    private void onPersonalMessage(LastMessageTxt lastMessage, BaseBotProperties properties) {
         lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL) + " Для связи: " + properties.getAdminMail());
     }
 
-    private static Map<String, String> getLine1Param(LastMessage lastMessage) {
+    private static Map<String, String> getLine1Param(LastMessageTxt lastMessage) {
         Map<String, String> data = TextUtil.line1param(lastMessage.getReceivedMessage());
         if (data.containsKey(ERROR)) {
             lastMessage.setError(true);
@@ -463,7 +406,7 @@ public class MessagesService {
         return data;
     }
 
-    private static Map<String, String> getLine2Param(LastMessage lastMessage) {
+    private static Map<String, String> getLine2Param(LastMessageTxt lastMessage) {
         Map<String, String> data = TextUtil.line2param(lastMessage.getReceivedMessage());
         if (data.containsKey(ERROR)) {
             lastMessage.setError(true);
@@ -472,7 +415,7 @@ public class MessagesService {
         return data;
     }
 
-    private boolean isPingPong(LastMessage lastMessage) {
+    private boolean isPingPong(LastMessageTxt lastMessage) {
         if (lastMessage.getReceivedMessage().equalsIgnoreCase("ping")) {
             lastMessage.setResponse("pong");
             log.info(">>>>> Ping-pong action by {}! :)", lastMessage.getUserName());

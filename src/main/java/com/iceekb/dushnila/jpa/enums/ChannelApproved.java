@@ -10,9 +10,9 @@ import java.util.stream.Collectors;
 
 @Getter
 public enum ChannelApproved {
-    APPROVED("Approved", 'A'),
-    REJECTED("Rejected", 'R'),
-    WAITING("Waiting", 'W');
+    APPROVED("App", 'A'),
+    REJECTED("Rej", 'R'),
+    WAITING("Wait", 'W');
 
     @Getter
     private static final Map<Character, ChannelApproved> idMap = Arrays.stream(ChannelApproved.values())

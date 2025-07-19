@@ -1,12 +1,15 @@
 package com.iceekb.dushnila.message.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum AdminCommand {
-    HELP("/help - помощь"),
-    APPROVE("/approve channelName - одобрить канал"),
-    DAPPROVE("/dapprove channelName - удалить одобрение"),
-    CHANNELS("/channels - список каналов"),
+    APPROVE("Одобрить канал"),
+    APPROVE_ADD("Канал одобрен"),
+    DAPPROVE("Удалить одобрение"),
+    DAPPROVE_ADD("Одобрение удалено"),
+    CHANNELS("Список каналов"),
     UNKNOWN("Команда не опознана"),
-    IMPORT("Импорт из старой базы"),
     UPTIME("Время работы");
 
     private final String label;

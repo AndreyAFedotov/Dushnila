@@ -6,10 +6,9 @@ import com.iceekb.dushnila.jpa.entity.Point;
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import com.iceekb.dushnila.jpa.entity.User;
 import com.iceekb.dushnila.jpa.enums.ChannelApproved;
-import com.iceekb.dushnila.properties.LastMessage;
-import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
+import com.iceekb.dushnila.properties.LastMessageTxt;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -22,11 +21,11 @@ public class ServiceUtil {
     public static final String FROM = "from";
     public static final String PARAM = "param";
 
-    private ServiceUtil(){
+    private ServiceUtil() {
 
     }
 
-    public static Channel channelAnalysis(Channel channel, LastMessage lastMessage) {
+    public static Channel channelAnalysis(Channel channel, LastMessageTxt lastMessage) {
         channel.setLastMessage(LocalDateTime.now());
         channel.setMessageCount(channel.getMessageCount() + 1);
         if (!Objects.equals(channel.getChatName(), lastMessage.getChannelName())) {
@@ -45,7 +44,7 @@ public class ServiceUtil {
         return channel;
     }
 
-    public static Channel createNewChannel(LastMessage lastMessage) {
+    public static Channel createNewChannel(LastMessageTxt lastMessage) {
         Channel channel = Channel.builder()
                 .tgId(checkChannelTgId(lastMessage.getChannelTgId()))
                 .chatName(lastMessage.getChannelName())
@@ -75,7 +74,7 @@ public class ServiceUtil {
         return Long.parseLong(channelIdStr.replace("-", ""));
     }
 
-    public static User createNewUser(LastMessage lastMessage) {
+    public static User createNewUser(LastMessageTxt lastMessage) {
         var now = LocalDateTime.now();
         User user = User.builder()
                 .tgId(lastMessage.getUserTgId())
@@ -88,7 +87,7 @@ public class ServiceUtil {
         return user;
     }
 
-    public static User userAnalysis(User user, LastMessage lastMessage) {
+    public static User userAnalysis(User user, LastMessageTxt lastMessage) {
         user.setLastMessage(LocalDateTime.now());
         if (!Objects.equals(user.getNickName(), lastMessage.getUserName())) {
             user.setNickName(lastMessage.getUserName());
@@ -97,7 +96,7 @@ public class ServiceUtil {
         return user;
     }
 
-    public static Reaction createNewReaction(LastMessage lastMessage, Map<String, String> data) {
+    public static Reaction createNewReaction(LastMessageTxt lastMessage, Map<String, String> data) {
         Reaction newReaction = Reaction.builder()
                 .channel(lastMessage.getChannel())
                 .textFrom(data.get(FROM))
@@ -120,7 +119,7 @@ public class ServiceUtil {
         return newReaction;
     }
 
-    public static ChatCommand getCommand(LastMessage lastMessage) {
+    public static ChatCommand getCommand(LastMessageTxt lastMessage) {
         String receivedMessage = lastMessage.getReceivedMessage();
         if (receivedMessage.startsWith("/")) {
             String[] parts = receivedMessage.split(" ", 2); // Разбиваем сообщение на две части: команда и остальная часть
@@ -137,30 +136,7 @@ public class ServiceUtil {
         return null;
     }
 
-    public static AdminCommand getAdminCommand(LastMessage lastMessage) {
-        String receivedMessage = lastMessage.getReceivedMessage().trim().toLowerCase();
-
-        switch (receivedMessage) {
-            case "/help":
-                return AdminCommand.HELP;
-            case "/channels":
-                return AdminCommand.CHANNELS;
-            case "/import":
-                return AdminCommand.IMPORT;
-            case "/uptime":
-                return AdminCommand.UPTIME;
-            default:
-                if (receivedMessage.startsWith("/approve")) {
-                    return AdminCommand.APPROVE;
-                } else if (receivedMessage.startsWith("/dapprove")) {
-                    return AdminCommand.DAPPROVE;
-                } else {
-                    return AdminCommand.UNKNOWN;
-                }
-        }
-    }
-
-    public static Point createNewPoint(LastMessage lastMessage) {
+    public static Point createNewPoint(LastMessageTxt lastMessage) {
         return Point.builder()
                 .channel(lastMessage.getChannel())
                 .user(lastMessage.getUser())
@@ -168,7 +144,7 @@ public class ServiceUtil {
                 .build();
     }
 
-    public static Ignore createNewIgnore(LastMessage lastMessage, Map<String, String> data) {
+    public static Ignore createNewIgnore(LastMessageTxt lastMessage, Map<String, String> data) {
         return Ignore.builder()
                 .channel(lastMessage.getChannel())
                 .word(data.get(PARAM))

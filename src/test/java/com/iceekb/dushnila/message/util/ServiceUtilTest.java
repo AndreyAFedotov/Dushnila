@@ -7,10 +7,9 @@ import com.iceekb.dushnila.jpa.entity.Point;
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import com.iceekb.dushnila.jpa.entity.User;
 import com.iceekb.dushnila.jpa.enums.ChannelApproved;
-import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
-import com.iceekb.dushnila.properties.LastMessage;
+import com.iceekb.dushnila.properties.LastMessageTxt;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +35,7 @@ class ServiceUtilTest extends TestUtils {
     })
     void channelAnalysisTest(String channelName, String messageChannelName, ChannelApproved approved) {
         Channel channel = createChanel();
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         channel.setChatName(channelName);
         channel.setApproved(approved);
         lastMessage.setChannelName(messageChannelName);
@@ -57,7 +56,7 @@ class ServiceUtilTest extends TestUtils {
     @Test
     void userAnalysisTest() {
         User user = createUser();
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         lastMessage.setUser(null);
         ServiceUtil.userAnalysis(user, lastMessage);
 
@@ -69,7 +68,7 @@ class ServiceUtilTest extends TestUtils {
 
     @Test
     void createNewChannelTest() {
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         lastMessage.setChannel(null);
         Channel channel = ServiceUtil.createNewChannel(lastMessage);
 
@@ -86,7 +85,7 @@ class ServiceUtilTest extends TestUtils {
 
     @Test
     void createNewUserTest() {
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         lastMessage.setUser(null);
         User user = ServiceUtil.createNewUser(lastMessage);
 
@@ -119,7 +118,7 @@ class ServiceUtilTest extends TestUtils {
     })
     void createNewReactionTest(String from, String to) {
         Map<String, String> data = Map.of("from", from, "to", to);
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
 
         Reaction reaction = ServiceUtil.createNewReaction(lastMessage, data);
         assertNotNull(reaction);
@@ -145,7 +144,7 @@ class ServiceUtilTest extends TestUtils {
             "test, CREPLACE, true"
     })
     void getCommandTest(String message, ChatCommand command, Boolean isUnknown) {
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         lastMessage.setReceivedMessage(message);
         ChatCommand chatCommand = ServiceUtil.getCommand(lastMessage);
 
@@ -157,28 +156,9 @@ class ServiceUtilTest extends TestUtils {
         }
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "/help, HELP",
-            "/channels, CHANNELS",
-            "/import, IMPORT",
-            "/uptime, UPTIME",
-            "/approve, APPROVE",
-            "/dapprove, DAPPROVE",
-            "/someCommand, UNKNOWN",
-            "string, UNKNOWN"
-    })
-    void getAdminCommandTest(String message, AdminCommand command) {
-        LastMessage lastMessage = createMessage();
-        lastMessage.setReceivedMessage(message);
-        AdminCommand adminCommand = ServiceUtil.getAdminCommand(lastMessage);
-        assertNotNull(adminCommand);
-        assertEquals(command, adminCommand);
-    }
-
     @Test
     void createNewPointTest() {
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         Point point = ServiceUtil.createNewPoint(lastMessage);
 
         assertNotNull(point);
@@ -189,7 +169,7 @@ class ServiceUtilTest extends TestUtils {
 
     @Test
     void createNewIgnoreTest() {
-        LastMessage lastMessage = createMessage();
+        LastMessageTxt lastMessage = createMessage();
         Map<String, String> data = Map.of("param", "test");
         Ignore ignore = ServiceUtil.createNewIgnore(lastMessage, data);
 
