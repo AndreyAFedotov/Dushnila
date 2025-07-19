@@ -12,7 +12,7 @@
 
 	<groupId>com.iceekb</groupId>
 	<artifactId>dushnila</artifactId>
-	<version>0.6.9</version>
+	<version>0.7.0</version>
 	<name>Dushnila</name>
 	<description>Another Telegram bot</description>
 

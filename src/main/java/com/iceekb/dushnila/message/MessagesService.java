@@ -15,6 +15,7 @@ import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
+import com.iceekb.dushnila.message.responses.AutoResponseService;
 import com.iceekb.dushnila.message.util.ServiceUtil;
 import com.iceekb.dushnila.message.util.TextUtil;
 import com.iceekb.dushnila.properties.BaseBotProperties;
@@ -52,6 +53,7 @@ public class MessagesService {
     private final ReactionRepo reactionRepo;
     private final IgnoreRepo ignoreRepo;
     private final SpellerService spellerService;
+    private final AutoResponseService responseService;
 
     public LastMessage onUpdate(Update update, BaseBotProperties properties) {
         LastMessage lastMessage = new LastMessage(update, properties);
@@ -449,7 +451,7 @@ public class MessagesService {
     }
 
     private void onPersonalMessage(LastMessage lastMessage, BaseBotProperties properties) {
-        lastMessage.setResponse(TextUtil.nextAutoMessage(ResponseTypes.PERSONAL) + " Для связи: " + properties.getAdminMail());
+        lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL) + " Для связи: " + properties.getAdminMail());
     }
 
     private static Map<String, String> getLine1Param(LastMessage lastMessage) {

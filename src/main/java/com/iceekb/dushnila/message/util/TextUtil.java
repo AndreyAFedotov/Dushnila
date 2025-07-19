@@ -1,12 +1,7 @@
 package com.iceekb.dushnila.message.util;
 
-import com.iceekb.dushnila.message.enums.ResponseTypes;
-import com.iceekb.dushnila.message.responses.PersonalResponses;
-import com.iceekb.dushnila.message.responses.SpellerResponses;
-
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 public class TextUtil {
     public static final String FORMAT_ERROR = "Ошибочный формат команды";
@@ -29,8 +24,6 @@ public class TextUtil {
             /channels - список каналов
             /uptime - Uptime
             """;
-
-    static Random random = new Random();
 
     private TextUtil() {
     }
@@ -77,16 +70,4 @@ public class TextUtil {
         );
     }
 
-    public static String nextAutoMessage(ResponseTypes type) {
-        return switch (type) {
-            case SPELLER -> getRandomMessage(SpellerResponses.data);
-            case PERSONAL -> getRandomMessage(PersonalResponses.data);
-        };
-    }
-
-    private static String getRandomMessage(List<String> messages) {
-        int size = messages.size();
-        int rnd = random.nextInt(size);
-        return messages.get(rnd);
-    }
 }

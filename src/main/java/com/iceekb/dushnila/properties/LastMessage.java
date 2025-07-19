@@ -41,15 +41,14 @@ public class LastMessage {
     private boolean isError;
 
     public LastMessage(Update update, BaseBotProperties properties) {
+        validationErrors = new ArrayList<>();
         if (!isTextMessage(update)) {
             isValid = false;
-            validationErrors = List.of(MessageValidationError.TYPE);
             return;
         } else {
             isValid = true;
         }
 
-        validationErrors = new ArrayList<>();
         isError = false;
         channelTgId = update.getMessage().getChatId();
         userTgId = update.getMessage().getFrom().getId();

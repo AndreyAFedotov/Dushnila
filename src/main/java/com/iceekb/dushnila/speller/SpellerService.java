@@ -2,17 +2,17 @@ package com.iceekb.dushnila.speller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.message.TransCharReplace;
-import com.iceekb.dushnila.message.enums.ResponseTypes;
-import com.iceekb.dushnila.message.util.TextUtil;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
+import com.iceekb.dushnila.message.enums.ResponseTypes;
+import com.iceekb.dushnila.message.responses.AutoResponseService;
+import com.iceekb.dushnila.properties.LastMessage;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -25,7 +25,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Component
+@Service
 @Data
 public class SpellerService {
 
@@ -38,10 +38,12 @@ public class SpellerService {
     private WebClient webClient;
     private TransCharReplace transCR;
     private ObjectMapper objectMapper;
+    private AutoResponseService autoResponseService;
 
-    public SpellerService(TransCharReplace transCR, ObjectMapper objectMapper) {
+    public SpellerService(TransCharReplace transCR, ObjectMapper objectMapper, AutoResponseService autoResponseService) {
         this.transCR = transCR;
         this.objectMapper = objectMapper;
+        this.autoResponseService = autoResponseService;
         this.webClient = WebClient.builder()
                 .baseUrl(SPELLER_URL)
                 .build();
@@ -134,7 +136,7 @@ public class SpellerService {
 
         for (Map.Entry<String, String> pair : pairs.entrySet()) {
             if (!pair.getKey().equals(pair.getValue())) {
-                result.append(String.format(Objects.requireNonNull(TextUtil.nextAutoMessage(ResponseTypes.SPELLER)),
+                result.append(String.format(Objects.requireNonNull(autoResponseService.getMessage(ResponseTypes.PUBLIC)),
                                 pair.getKey(),
                                 pair.getValue()))
                         .append(" ");

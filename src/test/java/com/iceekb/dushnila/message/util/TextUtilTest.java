@@ -1,7 +1,6 @@
 package com.iceekb.dushnila.message.util;
 
 import com.iceekb.dushnila.TestUtils;
-import com.iceekb.dushnila.message.enums.ResponseTypes;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,8 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(MockitoExtension.class)
 class TextUtilTest extends TestUtils {
@@ -61,16 +58,5 @@ class TextUtilTest extends TestUtils {
             assertEquals(commandTxt, data.get("command"));
             assertEquals(cmd, data.get("param"));
         }
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "SPELLER",
-            "PERSONAL"
-    })
-    void nextAutoMessageTest(ResponseTypes type) {
-        String message = TextUtil.nextAutoMessage(type);
-        assertNotNull(message);
-        assertFalse(message.isEmpty());
     }
 }
