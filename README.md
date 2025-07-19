@@ -40,4 +40,4 @@ bot:
   adminMail: "ADMIN EMAIL"
 ```
 
-P.S. Это просто проект "just for fun", так что улыбнёмся :)
+P.S. Это просто проект "just for fun" :)
