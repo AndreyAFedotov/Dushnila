@@ -67,7 +67,7 @@ public class SpellerService {
                 handleErrors(lastMessage, pairs);
             }
         } catch (Exception e) {
-            log.error("Speller error!", e);
+            log.error("Speller error: {}", e.getMessage());
             lastMessage.setError(true);
         }
         return lastMessage;
@@ -113,11 +113,15 @@ public class SpellerService {
     }
 
     private Map<String, String> extractPairs(List<SpellerIncomingDataWord> data) {
-        if (data == null || data.isEmpty()) return Map.of();
+        if (data == null || data.isEmpty()) {
+            return Map.of();
+        }
+
         return data.stream()
                 .collect(Collectors.toMap(
                         SpellerIncomingDataWord::getWord,
-                        word -> word.getS().get(0)
+                        word -> word.getS().get(0),
+                        (existingValue, newValue) -> existingValue
                 ));
     }
 
