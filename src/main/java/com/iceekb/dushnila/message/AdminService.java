@@ -64,17 +64,21 @@ public class AdminService {
     }
 
     private void deleteChannelFromApproved(LastMessageButton lastMessage, String msg) {
-        Long channelId = Long.parseLong(msg.split("#:#")[1]);
-        Channel channel = channelRepo.findById(channelId).orElse(null);
+        try {
+            Long channelId = Long.parseLong(msg.split("#:#")[1]);
+            Channel channel = channelRepo.findById(channelId).orElse(null);
 
-        if (channel == null) {
-            lastMessage.setError(true);
-            return;
+            if (channel == null) {
+                lastMessage.setError(true);
+                return;
+            }
+
+            channel.setApproved(ChannelApproved.REJECTED);
+            channelRepo.save(channel);
+            lastMessage.setResponse("Канал отклонён: " + channel.getChatName());
+        } catch (NumberFormatException e) {
+            log.error("Unexpected error during deleteChannelFromApproved: {}", e.getMessage(), e);
         }
-
-        channel.setApproved(ChannelApproved.REJECTED);
-        channelRepo.save(channel);
-        lastMessage.setResponse("Канал отклонён: " + channel.getChatName());
     }
 
     private void addChannelToApproved(LastMessageButton lastMessage, String msg) {

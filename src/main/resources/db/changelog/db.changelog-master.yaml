@@ -39,3 +39,11 @@ databaseChangeLog:
         - sqlFile:
             path: ../sql/0005-create-table-points.sql
             relativeToChangelogFile: true
+  - changeSet:
+      id: 2025-08-31-create-indexes
+      author: Andrey Fedotov
+      comment: create indexes for performance optimization
+      changes:
+        - sqlFile:
+            path: ../sql/0006-create-indexes.sql
+            relativeToChangelogFile: true

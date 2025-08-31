@@ -11,7 +11,10 @@ import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+
+
 import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.AfterBotRegistration;
@@ -51,6 +54,14 @@ public class Bot implements SpringLongPollingBot, LongPollingSingleThreadUpdateC
         this.messagesService = messagesService;
         this.adminService = adminService;
         this.botToken = token;
+
+        // Валидация параметров
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("Bot token cannot be null or empty");
+        }
+        if (admin == null || admin.trim().isEmpty()) {
+            throw new IllegalArgumentException("Bot admin ID cannot be null or empty");
+        }
 
         var client = new OkHttpClient.Builder()
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)
@@ -165,15 +176,29 @@ public class Bot implements SpringLongPollingBot, LongPollingSingleThreadUpdateC
     @AfterBotRegistration
     @SuppressWarnings("unused")
     public void afterRegistration(BotSession botSession) {
-        log.info("************* Registered bot running state is: {}", botSession.isRunning());
+        log.info("************* Bot registration started *************");
+        log.info("Bot session running state: {}", botSession.isRunning());
+        log.info("Bot token: {}", botToken != null ? "SET" : "NOT SET");
+        log.info("Bot admin ID: {}", properties.getBotAdmin());
+        
         try {
-            telegramClient.executeAsync(SendMessage.builder()
-                    .chatId(properties.getBotAdmin())
-                    .text(START_MESSAGE)
-                    .build());
+            if (botSession.isRunning()) {
+                log.info("Sending startup message to admin...");
+                telegramClient.executeAsync(SendMessage.builder()
+                        .chatId(properties.getBotAdmin())
+                        .text(START_MESSAGE)
+                        .build());
+                log.info("Startup message sent successfully");
+            } else {
+                log.warn("Bot session is not running, skipping startup message");
+            }
         } catch (TelegramApiException e) {
-            log.error(e.getMessage());
+            log.error("Telegram API error during startup: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error during startup: {}", e.getMessage(), e);
         }
+        
+        log.info("************* Bot registration completed *************");
     }
 
     public LastMessage getInstance(Update update) {

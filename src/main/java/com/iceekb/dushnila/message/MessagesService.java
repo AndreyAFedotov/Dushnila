@@ -394,7 +394,7 @@ public class MessagesService {
     }
 
     private void onPersonalMessage(LastMessageTxt lastMessage, BaseBotProperties properties) {
-        lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL) + " Для связи: " + properties.getAdminMail());
+        lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL, lastMessage.getChannel().getId()) + " Для связи: " + properties.getAdminMail());
     }
 
     private static Map<String, String> getLine1Param(LastMessageTxt lastMessage) {

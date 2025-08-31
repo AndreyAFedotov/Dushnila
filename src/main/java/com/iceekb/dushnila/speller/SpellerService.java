@@ -16,6 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import io.netty.channel.ChannelOption;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -32,8 +36,8 @@ public class SpellerService {
     private static final Integer ERROR_WORDS_LIMIT = 5;
     private static final String SPELLER_URL = "https://speller.yandex.net/services/spellservice.json/checkText";
     private static final String SPELLER_OPTIONS = "518";
-    private static final Integer CONNECTION_TIMEOUT = 2;
-    private static final Integer READ_TIMEOUT = 2;
+    private static final Integer CONNECTION_TIMEOUT = 5;
+    private static final Integer READ_TIMEOUT = 5;
 
     private WebClient webClient;
     private TransCharReplace transCR;
@@ -44,8 +48,18 @@ public class SpellerService {
         this.transCR = transCR;
         this.objectMapper = objectMapper;
         this.autoResponseService = autoResponseService;
-        this.webClient = WebClient.builder()
+        this.webClient = createOptimizedWebClient();
+    }
+
+    private WebClient createOptimizedWebClient() {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECTION_TIMEOUT * 1000)
+                .responseTimeout(Duration.ofSeconds(READ_TIMEOUT))
+                .compress(true); // Включаем сжатие для экономии трафика
+
+        return WebClient.builder()
                 .baseUrl(SPELLER_URL)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
 
@@ -87,6 +101,12 @@ public class SpellerService {
                         .build())
                 .exchangeToMono(this::getListMono)
                 .timeout(Duration.ofSeconds(READ_TIMEOUT))
+                .retryWhen(Retry.backoff(2, Duration.ofMillis(500))
+                        .maxBackoff(Duration.ofSeconds(2))
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                            log.warn("Speller API retry exhausted after {} attempts", retrySignal.totalRetries());
+                            return retrySignal.failure();
+                        }))
                 .onErrorResume(e -> {
                     log.error("Error querying Speller API: {}", e.getMessage());
                     return Mono.just(List.of());
@@ -140,7 +160,7 @@ public class SpellerService {
 
         for (Map.Entry<String, String> pair : pairs.entrySet()) {
             if (!pair.getKey().equals(pair.getValue())) {
-                result.append(String.format(Objects.requireNonNull(autoResponseService.getMessage(ResponseTypes.PUBLIC)),
+                result.append(String.format(Objects.requireNonNull(autoResponseService.getMessage(ResponseTypes.PUBLIC, lastMessage.getChannel().getId())),
                                 pair.getKey(),
                                 pair.getValue()))
                         .append(" ");

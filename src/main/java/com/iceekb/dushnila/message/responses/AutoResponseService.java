@@ -10,6 +10,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Data
@@ -34,36 +35,59 @@ public class AutoResponseService {
 
     private final Random random = new Random();
     private final Map<ResponseTypes, List<String>> responsesCache = new EnumMap<>(ResponseTypes.class);
-    private final Map<ResponseTypes, List<String>> workingCopies = new EnumMap<>(ResponseTypes.class);
+    
+    // Кэш для каждого канала отдельно
+    private final Map<Long, Map<ResponseTypes, List<String>>> channelResponses = new ConcurrentHashMap<>();
+    
+    // Максимальное количество каналов в памяти (защита от утечек)
+    private static final int MAX_CHANNELS_IN_MEMORY = 1000;
 
     @PostConstruct
     public void init() {
         responsesCache.put(ResponseTypes.PUBLIC, PUBLIC_DATA);
         responsesCache.put(ResponseTypes.PERSONAL, PERSONAL_DATA);
-        resetWorkingCopies();
     }
 
-    public String getMessage(ResponseTypes responseType) {
-        return getRandomMessage(responseType);
+    public String getMessage(ResponseTypes responseType, Long channelId) {
+        return getRandomMessage(responseType, channelId);
     }
 
-    private String getRandomMessage(ResponseTypes responseType) {
-        List<String> workingCopy = workingCopies.get(responseType);
-        if (workingCopy.isEmpty()) {
-            workingCopy = new ArrayList<>(responsesCache.get(responseType));
-            workingCopies.put(responseType, workingCopy);
-        }
-
-        int randomIndex = random.nextInt(workingCopy.size());
-        String message = workingCopy.get(randomIndex);
-        workingCopy.remove(randomIndex);
-
-        return message;
-    }
-
-    private void resetWorkingCopies() {
-        responsesCache.forEach((type, list) ->
-                workingCopies.put(type, new ArrayList<>(list))
+    private String getRandomMessage(ResponseTypes responseType, Long channelId) {
+        // Получаем или создаем кэш для конкретного канала
+        Map<ResponseTypes, List<String>> channelCache = channelResponses.computeIfAbsent(
+            channelId, 
+            k -> createChannelCache()
         );
+        
+        List<String> workingCopy = channelCache.get(responseType);
+        if (workingCopy.isEmpty()) {
+            // Если ответы закончились, восстанавливаем полный список
+            workingCopy = new ArrayList<>(responsesCache.get(responseType));
+            channelCache.put(responseType, workingCopy);
+        }
+        int randomIndex = random.nextInt(workingCopy.size());
+
+        return workingCopy.remove(randomIndex);
+    }
+
+    private Map<ResponseTypes, List<String>> createChannelCache() {
+        // Защита от утечек памяти - ограничиваем количество каналов
+        if (channelResponses.size() >= MAX_CHANNELS_IN_MEMORY) {
+            cleanupOldestChannels();
+        }
+        
+        Map<ResponseTypes, List<String>> channelCache = new EnumMap<>(ResponseTypes.class);
+        responsesCache.forEach((type, list) ->
+                channelCache.put(type, new ArrayList<>(list))
+        );
+        return channelCache;
+    }
+
+    private void cleanupOldestChannels() {
+        // Удаляем первые 100 каналов (самые старые)
+        int channelsToRemove = Math.min(100, channelResponses.size() / 2);
+        channelResponses.keySet().stream()
+                .limit(channelsToRemove)
+                .forEach(channelResponses::remove);
     }
 }
