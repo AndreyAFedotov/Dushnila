@@ -33,13 +33,13 @@ public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
     @NotNull
     @Override
     @CacheEvict(value = "ignoredWords", key = "#result.channel.id")
-    <S extends Ignore> S save(S entity);
+    <S extends Ignore> S save(@NotNull S entity);
 
     @Override
     @CacheEvict(value = "ignoredWords", key = "#entity.channel.id")
     void delete(@NotNull Ignore entity);
 
     @Override
-    @CacheEvict(value = "ignoredWords", key = "#entity.channel.id")
+    @CacheEvict(value = "ignoredWords", allEntries = true)
     void deleteById(@NotNull Long id);
 }

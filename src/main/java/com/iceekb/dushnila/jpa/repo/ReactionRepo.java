@@ -38,13 +38,13 @@ public interface ReactionRepo extends JpaRepository<Reaction, Long> {
     @NotNull
     @Override
     @CacheEvict(value = "reactions", key = "#result.channel.id")
-    <S extends Reaction> S save(S entity);
+    <S extends Reaction> S save(@NotNull S entity);
 
     @Override
     @CacheEvict(value = "reactions", key = "#entity.channel.id")
     void delete(@NotNull Reaction entity);
 
     @Override
-    @CacheEvict(value = "reactions", key = "#entity.channel.id")
+    @CacheEvict(value = "reactions", allEntries = true)
     void deleteById(@NotNull Long id);
 }
