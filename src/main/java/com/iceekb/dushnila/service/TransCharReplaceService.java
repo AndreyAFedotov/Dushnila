@@ -1,4 +1,4 @@
-package com.iceekb.dushnila.message;
+package com.iceekb.dushnila.service;
 
 import org.springframework.stereotype.Component;
 
@@ -7,11 +7,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
-public class TransCharReplace {
+public class TransCharReplaceService {
 
     private final Map<Character, Character> transData = new HashMap<>();
 
-    public TransCharReplace() {
+    public TransCharReplaceService() {
         initializeTransData();
     }
 

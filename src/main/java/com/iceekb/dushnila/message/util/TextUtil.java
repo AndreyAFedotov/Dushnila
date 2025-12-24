@@ -12,8 +12,8 @@ public class TextUtil {
             Команды бота:\s
             /help - данная справка
             /stat - статистика группы
-            /cignore - игнор слова (/cignore "слово")
-            /dignore - удалить игнор (/dignore "слово")
+            /cignore - игнор слова/фразы/маски (/cignore "слово" | "фраза" | "маска*")
+            /dignore - удалить игнор (/dignore "слово/фраза/маска*")
             /lignore - список игнора
             /creplace - замена (/creplace "слово/фраза" "на слово/фраза")
             /dreplace - удалить замену (/dreplace "слово/фраза")

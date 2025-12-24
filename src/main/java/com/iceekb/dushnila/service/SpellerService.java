@@ -1,11 +1,9 @@
-package com.iceekb.dushnila.speller;
+package com.iceekb.dushnila.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.iceekb.dushnila.message.TransCharReplace;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
-import com.iceekb.dushnila.message.responses.AutoResponseService;
 import com.iceekb.dushnila.properties.LastMessageTxt;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -40,11 +38,11 @@ public class SpellerService {
     private static final Integer READ_TIMEOUT = 5;
 
     private WebClient webClient;
-    private TransCharReplace transCR;
+    private TransCharReplaceService transCR;
     private ObjectMapper objectMapper;
     private AutoResponseService autoResponseService;
 
-    public SpellerService(TransCharReplace transCR, ObjectMapper objectMapper, AutoResponseService autoResponseService) {
+    public SpellerService(TransCharReplaceService transCR, ObjectMapper objectMapper, AutoResponseService autoResponseService) {
         this.transCR = transCR;
         this.objectMapper = objectMapper;
         this.autoResponseService = autoResponseService;
@@ -149,7 +147,7 @@ public class SpellerService {
     private void handlePossibleTransposition(LastMessageTxt lastMessage,
                                              String message,
                                              Map<String, String> pairs,
-                                             TransCharReplace transCR) {
+                                             TransCharReplaceService transCR) {
         if (transCR.isTrans(pairs)) {
             lastMessage.setResponse("Я помогу... \"" + transCR.modifyTransString(message) + "\"");
         }

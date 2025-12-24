@@ -12,7 +12,7 @@
 
 	<groupId>com.iceekb</groupId>
 	<artifactId>dushnila</artifactId>
-	<version>0.7.4</version>
+	<version>0.7.5</version>
 	<name>Dushnila</name>
 	<description>Another Telegram bot</description>
 
@@ -55,10 +55,6 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-jdbc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -1,7 +1,7 @@
 package com.iceekb.dushnila.jpa.repo;
 
 import com.iceekb.dushnila.jpa.entity.Channel;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

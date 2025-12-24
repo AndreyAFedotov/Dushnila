@@ -1,4 +1,4 @@
-package com.iceekb.dushnila.jpa.enums;
+package com.iceekb.dushnila.message.enums;
 
 import lombok.Getter;
 

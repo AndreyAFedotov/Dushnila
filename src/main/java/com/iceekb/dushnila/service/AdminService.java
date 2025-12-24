@@ -1,7 +1,10 @@
-package com.iceekb.dushnila.message;
+package com.iceekb.dushnila.service;
 
 import com.iceekb.dushnila.jpa.entity.Channel;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
+import com.iceekb.dushnila.jpa.repo.PointRepo;
+import com.iceekb.dushnila.jpa.repo.ReactionRepo;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.properties.BaseBotProperties;
@@ -29,6 +32,9 @@ import java.util.stream.Collectors;
 public class AdminService {
 
     private final ChannelRepo channelRepo;
+    private final IgnoreRepo ignoreRepo;
+    private final PointRepo pointRepo;
+    private final ReactionRepo reactionRepo;
 
     public LastMessageButton onUpdate(Update update, BaseBotProperties properties) {
         LastMessageButton lastMessage = new LastMessageButton(update, properties);
@@ -60,9 +66,39 @@ public class AdminService {
                     AdminCommand.DAPPROVE_ADD
             );
             case DAPPROVE_ADD -> deleteChannelFromApproved(lastMessage, msg);
+            case DELETE_CHANNEL -> getApprovedListByStatus(
+                    lastMessage,
+                    List.of(ChannelApproved.REJECTED),
+                    "Список отклонённых",
+                    AdminCommand.DELETE_CHANNEL_ADD
+            );
+            case DELETE_CHANNEL_ADD -> deleteChannelFromDb(lastMessage, msg);
             default -> {
                 // do nothing
             }
+        }
+    }
+
+    private void deleteChannelFromDb(LastMessageButton lastMessage, String msg) {
+        try {
+            Long channelId = Long.parseLong(msg.split("#:#")[1]);
+            Channel channel = channelRepo.findById(channelId).orElse(null);
+
+            if (channel == null) {
+                lastMessage.setError(true);
+                return;
+            }
+
+            // Явно чистим связанные сущности (по требованию), затем удаляем сам канал.
+            // Порядок важен для БД без каскадов.
+            ignoreRepo.deleteAllByChannelId(channelId);
+            reactionRepo.deleteAllByChannelId(channelId);
+            pointRepo.deleteAllByChannelId(channelId);
+            channelRepo.deleteById(channelId);
+
+            lastMessage.setResponse("Канал удалён: " + channel.getChatName());
+        } catch (NumberFormatException e) {
+            log.error("Unexpected error during deleteChannelFromDb: {}", e.getMessage(), e);
         }
     }
 

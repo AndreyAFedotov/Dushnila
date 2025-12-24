@@ -8,6 +8,8 @@ public enum AdminCommand {
     APPROVE_ADD("Канал одобрен"),
     DAPPROVE("Удалить одобрение"),
     DAPPROVE_ADD("Одобрение удалено"),
+    DELETE_CHANNEL("Удалить канал"),
+    DELETE_CHANNEL_ADD("Канал удалён"),
     CHANNELS("Список каналов"),
     UNKNOWN("Команда не опознана"),
     UPTIME("Время работы");

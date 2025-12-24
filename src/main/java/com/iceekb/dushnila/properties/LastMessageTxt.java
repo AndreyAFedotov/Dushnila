@@ -3,7 +3,6 @@ package com.iceekb.dushnila.properties;
 import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.User;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
-import com.iceekb.dushnila.message.enums.UpdateType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,7 +31,7 @@ public class LastMessageTxt extends LastMessage {
 
     public LastMessageTxt(Update update, BaseBotProperties properties) {
         validationErrors = new ArrayList<>();
-        if (!isTextMessage(update)) {
+        if (!update.hasMessage() || !update.getMessage().hasText()) {
             isValid = false;
             return;
         } else {
@@ -68,17 +67,6 @@ public class LastMessageTxt extends LastMessage {
         if (!validationErrors.isEmpty()) {
             isValid = false;
         }
-    }
-
-    private boolean isTextMessage(Update update) {
-        return getUpdateType(update) == UpdateType.TEXT_MESSAGE;
-    }
-
-    private UpdateType getUpdateType(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            return UpdateType.TEXT_MESSAGE;
-        }
-        return UpdateType.OTHER;
     }
 
     private String collectUserName(Update update) {

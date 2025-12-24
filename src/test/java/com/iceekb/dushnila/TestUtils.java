@@ -2,7 +2,7 @@ package com.iceekb.dushnila;
 
 import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.User;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import com.iceekb.dushnila.properties.LastMessageTxt;
 
 import java.time.LocalDateTime;

@@ -5,7 +5,7 @@ import com.iceekb.dushnila.jpa.entity.Ignore;
 import com.iceekb.dushnila.jpa.entity.Point;
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import com.iceekb.dushnila.jpa.entity.User;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
 import com.iceekb.dushnila.properties.LastMessageTxt;

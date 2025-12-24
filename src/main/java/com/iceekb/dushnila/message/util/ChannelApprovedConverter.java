@@ -1,8 +1,9 @@
-package com.iceekb.dushnila.jpa.converter;
+package com.iceekb.dushnila.message.util;
 
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import jakarta.persistence.AttributeConverter;
 
+@SuppressWarnings("ConverterNotAnnotatedInspection")
 public class ChannelApprovedConverter implements AttributeConverter<ChannelApproved, Character> {
     @Override
     public Character convertToDatabaseColumn(ChannelApproved channelApproved) {

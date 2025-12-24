@@ -9,7 +9,7 @@
 
     <!-- Аппендер с фильтром для Telegram -->
     <appender name="FILTERED_TELEGRAM" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="com.iceekb.dushnila.TelegramLogFilter"/>
+        <filter class="com.iceekb.dushnila.properties.TelegramLogFilter"/>
         <encoder>
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
         </encoder>

@@ -1,7 +1,5 @@
-package com.iceekb.dushnila;
+package com.iceekb.dushnila.service;
 
-import com.iceekb.dushnila.message.AdminService;
-import com.iceekb.dushnila.message.MessagesService;
 import com.iceekb.dushnila.properties.BaseBotProperties;
 import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.properties.LastMessageButton;
@@ -32,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-public class Bot implements SpringLongPollingBot, LongPollingUpdateConsumer {
+public class BotService implements SpringLongPollingBot, LongPollingUpdateConsumer {
 
     private static final String START_MESSAGE = "The bot has been successfully launched!";
     private final TelegramClient telegramClient;
@@ -42,16 +40,16 @@ public class Bot implements SpringLongPollingBot, LongPollingUpdateConsumer {
     private final BaseBotProperties properties;
     private final ObjectProvider<BuildProperties> buildPropertiesProvider;
 
-    public Bot(@Value("${bot.token}") String token,
-               @Value("${bot.name}") String name,
-               @Value("${bot.admin}") String admin,
-               @Value("${bot.adminMail}") String adminMail,
-               @Value("${bot.connectTimeout}") Integer connectTimeout,
-               @Value("${bot.readTimeout}") Integer readTimeout,
-               @Value("${bot.writeTimeout}") Integer writeTimeout,
-               MessagesService messagesService,
-               AdminService adminService,
-               ObjectProvider<BuildProperties> buildPropertiesProvider) {
+    public BotService(@Value("${bot.token}") String token,
+                      @Value("${bot.name}") String name,
+                      @Value("${bot.admin}") String admin,
+                      @Value("${bot.adminMail}") String adminMail,
+                      @Value("${bot.connectTimeout}") Integer connectTimeout,
+                      @Value("${bot.readTimeout}") Integer readTimeout,
+                      @Value("${bot.writeTimeout}") Integer writeTimeout,
+                      MessagesService messagesService,
+                      AdminService adminService,
+                      ObjectProvider<BuildProperties> buildPropertiesProvider) {
         this.messagesService = messagesService;
         this.adminService = adminService;
         this.botToken = token;

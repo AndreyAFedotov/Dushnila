@@ -1,9 +1,7 @@
-package com.iceekb.dushnila.speller;
+package com.iceekb.dushnila.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.iceekb.dushnila.message.TransCharReplace;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
-import com.iceekb.dushnila.message.responses.AutoResponseService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -36,7 +34,7 @@ class SpellerServiceLogicTest {
     }
 
     private SpellerService createService() {
-        return new SpellerService(new TransCharReplace(), new ObjectMapper(), autoResponseService);
+        return new SpellerService(new TransCharReplaceService(), new ObjectMapper(), autoResponseService);
     }
 
     @Test

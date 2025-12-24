@@ -13,7 +13,7 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
-        cacheManager.setCacheNames(java.util.List.of("ignoredWords", "reactions"));
+        cacheManager.setCacheNames(java.util.List.of("ignoredWords", "ignoreRules", "reactions"));
         return cacheManager;
     }
 }

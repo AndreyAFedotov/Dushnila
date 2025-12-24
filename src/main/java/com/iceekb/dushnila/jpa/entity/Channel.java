@@ -1,7 +1,7 @@
 package com.iceekb.dushnila.jpa.entity;
 
-import com.iceekb.dushnila.jpa.converter.ChannelApprovedConverter;
-import com.iceekb.dushnila.jpa.enums.ChannelApproved;
+import com.iceekb.dushnila.message.util.ChannelApprovedConverter;
+import com.iceekb.dushnila.message.enums.ChannelApproved;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;

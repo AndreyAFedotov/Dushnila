@@ -1,4 +1,4 @@
-package com.iceekb.dushnila;
+package com.iceekb.dushnila.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +11,7 @@ import org.springframework.beans.factory.ObjectProvider;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class StartupInfoLogger implements ApplicationRunner {
+public class StartupInfoLoggerService implements ApplicationRunner {
 
     private final ObjectProvider<BuildProperties> buildPropertiesProvider;
 

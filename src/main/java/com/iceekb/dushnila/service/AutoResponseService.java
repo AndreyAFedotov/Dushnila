@@ -1,4 +1,4 @@
-package com.iceekb.dushnila.message.responses;
+package com.iceekb.dushnila.service;
 
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import jakarta.annotation.PostConstruct;

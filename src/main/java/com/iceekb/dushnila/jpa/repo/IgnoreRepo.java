@@ -1,15 +1,16 @@
 package com.iceekb.dushnila.jpa.repo;
 
 import com.iceekb.dushnila.jpa.entity.Ignore;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.lang.NonNull;
+
 
 import java.util.List;
 
-@SuppressWarnings("NullableProblems")
 public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
 
     @Query("""
@@ -19,6 +20,7 @@ public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
             """)
     Ignore findByWordAndChatId(String word, Long id);
 
+    @Deprecated
     @Query("""
             SELECT EXISTS (SELECT 1 FROM Ignore ig WHERE ig.word = :word AND ig.channel.tgId = :id)
             """)
@@ -31,16 +33,22 @@ public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
     @Cacheable(value = "ignoredWords", key = "#channelId")
     List<Ignore> findAllByChatId(Long channelId);
 
-    @NotNull
-    @Override
-    @CacheEvict(value = "ignoredWords", key = "#result.channel.id")
-    <S extends Ignore> S save(@NotNull S entity);
+    @SuppressWarnings("UnusedReturnValue")
+    @Modifying
+    @Query("DELETE FROM Ignore ig WHERE ig.channel.id = :channelId")
+    @CacheEvict(cacheNames = {"ignoredWords", "ignoreRules"}, allEntries = true)
+    int deleteAllByChannelId(Long channelId);
 
     @Override
-    @CacheEvict(value = "ignoredWords", key = "#entity.channel.id")
-    void delete(@NotNull Ignore entity);
+    @CacheEvict(cacheNames = {"ignoredWords", "ignoreRules"}, key = "#result.channel.id")
+    @NonNull
+    <S extends Ignore> S save(@NonNull S entity);
 
     @Override
-    @CacheEvict(value = "ignoredWords", allEntries = true)
-    void deleteById(@NotNull Long id);
+    @CacheEvict(cacheNames = {"ignoredWords", "ignoreRules"}, key = "#entity.channel.id")
+    void delete(@NonNull Ignore entity);
+
+    @Override
+    @CacheEvict(cacheNames = {"ignoredWords", "ignoreRules"}, allEntries = true)
+    void deleteById(@NonNull Long id);
 }

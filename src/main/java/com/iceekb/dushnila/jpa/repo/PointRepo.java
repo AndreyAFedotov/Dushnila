@@ -41,4 +41,8 @@ public interface PointRepo extends JpaRepository<Point, Long> {
             DO UPDATE SET point_count = points.point_count + 1
             """, nativeQuery = true)
     int incrementPoint(@Param("channelId") Long channelId, @Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Point p WHERE p.channel.id = :channelId")
+    int deleteAllByChannelId(Long channelId);
 }

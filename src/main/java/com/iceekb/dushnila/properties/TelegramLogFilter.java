@@ -1,4 +1,4 @@
-package com.iceekb.dushnila;
+package com.iceekb.dushnila.properties;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
