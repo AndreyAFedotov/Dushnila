@@ -60,6 +60,9 @@ public class AdminService {
                     AdminCommand.DAPPROVE_ADD
             );
             case DAPPROVE_ADD -> deleteChannelFromApproved(lastMessage, msg);
+            default -> {
+                // do nothing
+            }
         }
     }
 

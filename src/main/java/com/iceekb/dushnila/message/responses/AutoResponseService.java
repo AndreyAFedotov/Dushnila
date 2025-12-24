@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Data
@@ -20,7 +20,7 @@ public class AutoResponseService {
             "Не \"%s\", а \"%s\"! \uD83D\uDC40 ",
             "Хм.. \"%s\" не верно, верно \"%s\". \uD83D\uDE44",
             "Вообще-то не \"%s\", а \"%s\"! \uD83E\uDD13 ",
-            "Но... ведь правильно \"%s\", а не \"%s\"... \uD83E\uDD14 ",
+            "Но... ведь \"%s\" не правильно, нужно писать \"%s\"... \uD83E\uDD14 ",
             "\"%s\" - ошибка. Запоминаем: \"%s\".",
             "\"%s\"? *вздох* Ладно... \"%s\". \uD83D\uDE2E\u200D\uD83D\uDCA8 ",
             "\"%s\" — это смело. Но правильно \"%s\".",
@@ -33,7 +33,6 @@ public class AutoResponseService {
             "Сегодня вход только по приглашениям ;)"
     );
 
-    private final Random random = new Random();
     private final Map<ResponseTypes, List<String>> responsesCache = new EnumMap<>(ResponseTypes.class);
     
     // Кэш для каждого канала отдельно
@@ -58,16 +57,18 @@ public class AutoResponseService {
             channelId, 
             k -> createChannelCache()
         );
-        
-        List<String> workingCopy = channelCache.get(responseType);
-        if (workingCopy.isEmpty()) {
-            // Если ответы закончились, восстанавливаем полный список
-            workingCopy = new ArrayList<>(responsesCache.get(responseType));
-            channelCache.put(responseType, workingCopy);
-        }
-        int randomIndex = random.nextInt(workingCopy.size());
 
-        return workingCopy.remove(randomIndex);
+        // channelCache хранит ArrayList внутри — защищаем операции от гонок на одном канале.
+        synchronized (channelCache) {
+            List<String> workingCopy = channelCache.get(responseType);
+            if (workingCopy == null || workingCopy.isEmpty()) {
+                // Если ответы закончились, восстанавливаем полный список
+                workingCopy = new ArrayList<>(responsesCache.get(responseType));
+                channelCache.put(responseType, workingCopy);
+            }
+            int randomIndex = ThreadLocalRandom.current().nextInt(workingCopy.size());
+            return workingCopy.remove(randomIndex);
+        }
     }
 
     private Map<ResponseTypes, List<String>> createChannelCache() {

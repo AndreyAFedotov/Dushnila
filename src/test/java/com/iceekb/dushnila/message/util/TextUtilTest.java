@@ -19,7 +19,9 @@ class TextUtilTest extends TestUtils {
             "/command \"from\" \"to\" \"to\", true, COMMAND, from, to",
             "/command \"from\" \"to and to\", false, COMMAND, from, to and to",
             "/command \"from and from\" \"to\" \"to\", true, COMMAND, from and from, to",
-            "/WORD \"from and from\" \"to\", true, WORD, from and from, to"
+            "/command «from» «to», false, COMMAND, from, to",
+            "/command “from” “to”, false, COMMAND, from, to"
+            //"/WORD \"from and from\" \"to\", true, WORD, from and from, to" // теперь стало можно фразы
     })
     void line2paramTest(String command, Boolean isError, String commandTxt, String from, String to) {
 
@@ -45,7 +47,9 @@ class TextUtilTest extends TestUtils {
     @ParameterizedTest
     @CsvSource({
             "/command \"cmd\", false, COMMAND, cmd",
-            "/command cmd, true, COMMAND, cmd"
+            "/command cmd, true, COMMAND, cmd",
+            "/command «cmd», false, COMMAND, cmd",
+            "/command “cmd”, false, COMMAND, cmd"
     })
     void line1paramTest(String command, Boolean isError, String commandTxt, String cmd) {
         Map<String, String> data = TextUtil.line1param(command);

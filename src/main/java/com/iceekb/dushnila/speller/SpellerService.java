@@ -63,6 +63,7 @@ public class SpellerService {
                 .build();
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public LastMessageTxt speller(LastMessageTxt lastMessage) {
         String message = lastMessage.getReceivedMessage();
 
@@ -92,12 +93,10 @@ public class SpellerService {
             return Mono.just(List.of());
         }
 
-        String query = text.replace(" ", "+");
-
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .queryParam("options", SPELLER_OPTIONS)
-                        .queryParam("text", query)
+                        .queryParam("text", text)
                         .build())
                 .exchangeToMono(this::getListMono)
                 .timeout(Duration.ofSeconds(READ_TIMEOUT))
@@ -138,6 +137,8 @@ public class SpellerService {
         }
 
         return data.stream()
+                .filter(word -> word != null && word.getWord() != null)
+                .filter(word -> word.getS() != null && !word.getS().isEmpty())
                 .collect(Collectors.toMap(
                         SpellerIncomingDataWord::getWord,
                         word -> word.getS().get(0),
@@ -183,6 +184,12 @@ public class SpellerService {
     private List<SpellerIncomingDataWord> filterData(SpellerIncomingDataWord[] data) {
         List<SpellerIncomingDataWord> result = new ArrayList<>();
         for (SpellerIncomingDataWord word : data) {
+            if (word == null || word.getWord() == null) {
+                continue;
+            }
+            if (word.getS() == null || word.getS().isEmpty()) {
+                continue;
+            }
             if (!word.getWord().equals(word.getS().get(0))) {
                 result.add(word);
             }

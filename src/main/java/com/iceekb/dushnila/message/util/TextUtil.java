@@ -1,5 +1,7 @@
 package com.iceekb.dushnila.message.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +19,8 @@ public class TextUtil {
             /dreplace - удалить замену (/dreplace "слово")
             /lreplace - список замены
             """;
+
+    @SuppressWarnings("unused")
     public static final String ADMIN_MENU = """
             Команды бота:\s
             /approve channelName - одобрить канал
@@ -28,9 +32,9 @@ public class TextUtil {
     private TextUtil() {
     }
 
-    public static Map<String, String> line2param(String text) {
-        text = text.replace("«", "\"");
-        text = text.replace("»", "\"");
+    public static Map<String, String> line2param(String sourceText) {
+        String text = normalizeText(sourceText);
+
         List<String> data = List.of(text.split("\""));
         if (data.size() != 4) {
             return Map.of(ERROR, FORMAT_ERROR);
@@ -38,9 +42,6 @@ public class TextUtil {
         String command = data.get(0).replace("/", "").toUpperCase().trim();
         String from = data.get(1).trim();
         String to = data.get(3).trim();
-        if (from.contains(" ")) {
-            return Map.of(ERROR, "Преобразуем только слово, не фразу...");
-        }
         if (command.isEmpty() || from.isEmpty() || to.isEmpty()) {
             return Map.of(ERROR, FORMAT_ERROR);
         }
@@ -51,9 +52,9 @@ public class TextUtil {
         );
     }
 
-    public static Map<String, String> line1param(String text) {
-        text = text.replace("«", "\"");
-        text = text.replace("»", "\"");
+    public static Map<String, String> line1param(String sourceText) {
+        String text = normalizeText(sourceText);
+
         List<String> data = List.of(text.split("\""));
         if (data.size() != 2) {
             return Map.of(ERROR, FORMAT_ERROR);
@@ -68,6 +69,14 @@ public class TextUtil {
                 "command", command,
                 "param", param.toLowerCase()
         );
+    }
+
+    @NotNull
+    private static String normalizeText(String text) {
+        return text.replace("«", "\"")
+        .replace("»", "\"")
+        .replace("“", "\"")
+        .replace("”", "\"");
     }
 
 }

@@ -1,7 +1,7 @@
 package com.iceekb.dushnila.jpa.repo;
 
 import com.iceekb.dushnila.jpa.entity.Ignore;
-import org.jetbrains.annotations.NotNull;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
+@SuppressWarnings("NullableProblems")
 public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
 
     @Query("""

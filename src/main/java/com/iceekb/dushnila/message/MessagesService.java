@@ -22,9 +22,11 @@ import com.iceekb.dushnila.properties.LastMessageTxt;
 import com.iceekb.dushnila.speller.SpellerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -32,16 +34,19 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional
 public class MessagesService {
     private final static List<AdminCommand> OK_COMMANDS = List.of(
             AdminCommand.APPROVE,
@@ -62,6 +67,23 @@ public class MessagesService {
     private final IgnoreRepo ignoreRepo;
     private final SpellerService spellerService;
     private final AutoResponseService responseService;
+    private final PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate tx;
+
+    @PostConstruct
+    void initTx() {
+        this.tx = new TransactionTemplate(transactionManager);
+    }
+
+    private void runInTx(Runnable action) {
+        // Защита для unit-тестов/нестандартных окружений: если tx не инициализирован, выполняем напрямую.
+        if (tx == null) {
+            action.run();
+            return;
+        }
+        tx.executeWithoutResult(status -> action.run());
+    }
 
     public LastMessageTxt onUpdate(Update update, BaseBotProperties properties) {
         LastMessageTxt lastMessage = new LastMessageTxt(update, properties);
@@ -102,10 +124,10 @@ public class MessagesService {
         try {
             if (isPingPong(lastMessage)) return;
 
-            checkMessageAccess(lastMessage);
+            runInTx(() -> checkMessageAccess(lastMessage));
             if (shouldReturn(lastMessage)) return;
 
-            checkCommands(lastMessage);
+            runInTx(() -> checkCommands(lastMessage));
             if (shouldReturn(lastMessage)) return;
 
             deleteIgnoreAndUsers(lastMessage);
@@ -148,56 +170,154 @@ public class MessagesService {
 
     private void checkReaction(LastMessageTxt lastMessage) {
         List<Reaction> reactions = reactionRepo.findAllByChannelId(lastMessage.getChannel().getId());
-        Map<String, String> reactionMap = reactions.stream()
-                .collect(Collectors.toMap(
-                        reaction -> reaction.getTextFrom().toLowerCase(),
-                        Reaction::getTextTo,
-                        (existing, replacement) -> existing));
 
-        // Обрабатываем сообщение
-        String[] words = lastMessage.getReceivedMessage()
-                .replaceAll("\\p{Punct}", " ")  // Заменяем знаки препинания на пробелы
-                .replaceAll("\\s+", " ")        // Заменяем множественные пробелы на один
-                .trim()
-                .split("\\s+");                 // Разбиваем по пробелам
+        // Единая нормализация для текста сообщения и ключей реакций.
+        // Важно: дефис/тире должны оставаться значимыми, иначе разные реакции
+        // "мама анархия" и "мама - анархия" схлопнутся в один ключ.
+        Function<String, String> normalizer = s -> {
+            if (s == null) return "";
+            return s.toLowerCase()
+                    // Приводим любые Unicode-дефисы/тире к обычному '-'
+                    .replaceAll("\\p{Pd}+", "-")
+                    // Удаляем всю остальную Unicode-пунктуацию, КРОМЕ '-' (он нужен для различения реакций)
+                    .replaceAll("[\\p{P}&&[^-]]", " ")
+                    // Нормализуем пробелы вокруг '-': "a-b", "а -b", "a- b" => "a - b"
+                    .replaceAll("\\s*-\\s*", " - ")
+                    .replaceAll("\\s+", " ")
+                    .trim();
+        };
 
-        // Обрабатываем слова и собираем результат
+        if (reactions.isEmpty() || StringUtils.isBlank(lastMessage.getReceivedMessage())) {
+            return;
+        }
+
+        // Нормализуем сообщение: приводим к нижнему регистру, убираем пунктуацию, нормализуем пробелы
+        String originalLower = lastMessage.getReceivedMessage().toLowerCase();
+        String normalisedMessage = normalizer.apply(lastMessage.getReceivedMessage());
+
+        // Разделяем реакции на фразы и слова по НОРМАЛИЗОВАННОМУ ключу.
+        List<Reaction> phraseReactions = reactions.stream()
+                .filter(r -> normalizer.apply(r.getTextFrom()).contains(" "))
+                .toList();
+
+        List<Reaction> wordReactions = reactions.stream()
+                .filter(r -> !normalizer.apply(r.getTextFrom()).contains(" "))
+                .toList();
+
+        // Множество для хранения позиций символов, покрытых найденными фразами
+        Set<Integer> coveredPositions = new HashSet<>();
         StringJoiner result = new StringJoiner(". ");
-        for (String word : words) {
-            if (StringUtils.isNotBlank(word)) {
-                // Ищем реакцию (без учета регистра)
-                String reaction = reactionMap.getOrDefault(word.toLowerCase(), null);
-                if (reaction != null) {
-                    result.add(reaction);
-                }
+
+        // Сначала обрабатываем фразы
+        // Если несколько фраз нормализуются в один ключ — выбираем "лучшее" совпадение:
+        // 1) точное совпадение по исходному тексту приоритетнее
+        // 2) иначе совпадение по нормализованному тексту
+        //noinspection ClassCanBeRecord
+        class PhraseCandidate {
+            final String originalKey;
+            final String response;
+            final int score; // 2 = exact, 1 = normalized
+
+            PhraseCandidate(String originalKey, String response, int score) {
+                this.originalKey = originalKey;
+                this.response = response;
+                this.score = score;
             }
         }
 
+        Map<String, PhraseCandidate> bestByNormalized = new java.util.HashMap<>();
+        for (Reaction r : phraseReactions) {
+            String originalKey = (r.getTextFrom() == null) ? "" : r.getTextFrom().toLowerCase();
+            String normalizedKey = normalizer.apply(r.getTextFrom());
+            if (StringUtils.isBlank(normalizedKey)) continue;
+
+            int score = 0;
+            if (StringUtils.isNotBlank(originalKey) && originalLower.contains(originalKey)) {
+                score = 2;
+            } else if (normalisedMessage.contains(normalizedKey)) {
+                score = 1;
+            }
+            if (score == 0) continue;
+
+            PhraseCandidate current = bestByNormalized.get(normalizedKey);
+            if (current == null
+                    || score > current.score
+                    || (score == current.score && originalKey.length() > current.originalKey.length())) {
+                bestByNormalized.put(normalizedKey, new PhraseCandidate(originalKey, r.getTextTo(), score));
+            }
+        }
+
+        bestByNormalized.forEach((phrase, cand) -> {
+            int index = 0;
+            boolean phraseFound = false;
+            while ((index = normalisedMessage.indexOf(phrase, index)) != -1) {
+                // Записываем все позиции символов этой фразы как покрытые
+                for (int i = index; i < index + phrase.length(); i++) {
+                    coveredPositions.add(i);
+                }
+                phraseFound = true;
+                index += phrase.length(); // Переходим к следующему возможному вхождению
+            }
+            if (phraseFound) {
+                result.add(cand.response);
+            }
+        });
+
+        // Затем обрабатываем слова, исключая те, что были покрыты фразами
+        Map<String, String> wordMap = wordReactions.stream()
+                .collect(Collectors.toMap(
+                        r -> normalizer.apply(r.getTextFrom()),
+                        Reaction::getTextTo,
+                        (existing, replacement) -> existing
+                ));
+
+        wordMap.forEach((word, value) -> {
+            // Важно: \b в Java по умолчанию плохо работает с кириллицей (без UNICODE_CHARACTER_CLASS),
+            // поэтому используем Unicode-границы "не буква/цифра/_" вокруг слова.
+            String pattern = "(?iu)(?<![\\p{L}\\p{N}_])" + Pattern.quote(word) + "(?![\\p{L}\\p{N}_])";
+            Pattern compiledPattern = Pattern.compile(pattern);
+            Matcher matcher = compiledPattern.matcher(normalisedMessage);
+            
+            while (matcher.find()) {
+                int start = matcher.start();
+                int end = matcher.end();
+                
+                // Проверяем, не покрыта ли эта позиция фразой
+                boolean isCovered = false;
+                for (int i = start; i < end; i++) {
+                    if (coveredPositions.contains(i)) {
+                        isCovered = true;
+                        break;
+                    }
+                }
+                
+                if (!isCovered) {
+                    result.add(value);
+                    break; // Достаточно одного совпадения для слова
+                }
+            }
+        });
+
         String response = result.toString();
-        if (response != null && !response.isEmpty()) {
+        if (StringUtils.isNotBlank(response)) {
             lastMessage.setResponse(response);
         }
     }
 
     private void speller(LastMessageTxt lastMessage) {
-        lastMessage = spellerService.speller(lastMessage);
+        spellerService.speller(lastMessage);
         if (StringUtils.isNotBlank(lastMessage.getResponse())) {
-            addPoint(lastMessage);
+            // Важно: начисление очков делаем в отдельной короткой транзакции,
+            // чтобы не держать транзакцию БД во время сетевого запроса к спеллеру.
+            runInTx(() -> addPoint(lastMessage));
         }
     }
 
     private void addPoint(LastMessageTxt lastMessage) {
-        Point point = pointRepo.findPointsForChannelIdAndUserId(
+        pointRepo.incrementPoint(
                 lastMessage.getChannel().getId(),
                 lastMessage.getUser().getId()
         );
-        if (point != null) {
-            point.setPointCount(point.getPointCount() + 1);
-            pointRepo.save(point);
-        } else {
-            Point newPoint = ServiceUtil.createNewPoint(lastMessage);
-            pointRepo.save(newPoint);
-        }
     }
 
     private void deleteIgnoreAndUsers(LastMessageTxt lastMessage) {
@@ -208,7 +328,12 @@ public class MessagesService {
                 .collect(Collectors.toSet());
 
         String processedMessage = Arrays.stream(lastMessage.getReceivedMessage()
-                        .replaceAll("\\p{Punct}&&[^@]", " ")  // Удаляем все знаки препинания, КРОМЕ @
+                        // Приводим любые Unicode-дефисы/тире к обычному '-'
+                        .replaceAll("\\p{Pd}+", "-")
+                        // Удаляем всю Unicode-пунктуацию, КРОМЕ @ и '-' (дефис нужен для фразовых реакций)
+                        .replaceAll("[\\p{P}&&[^@-]]", " ")
+                        // Нормализуем пробелы вокруг '-': "a-b", "а -b", "a- b" => "a - b"
+                        .replaceAll("\\s*-\\s*", " - ")
                         .replaceAll("\\s+", " ")        // Нормализуем пробелы
                         .trim()
                         .split("\\s+"))                // Разбиваем по пробелам
@@ -394,7 +519,12 @@ public class MessagesService {
     }
 
     private void onPersonalMessage(LastMessageTxt lastMessage, BaseBotProperties properties) {
-        lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL, lastMessage.getChannel().getId()) + " Для связи: " + properties.getAdminMail());
+        // Для лички `channel` может быть не инициализирован (ветка идёт в обход checkMessageAccess),
+        // поэтому используем безопасный ключ для шаблонов ответов.
+        Long responseKey = lastMessage.getChannel() != null
+                ? lastMessage.getChannel().getId()
+                : lastMessage.getUserTgId();
+        lastMessage.setResponse(responseService.getMessage(ResponseTypes.PERSONAL, responseKey) + " Для связи: " + properties.getAdminMail());
     }
 
     private static Map<String, String> getLine1Param(LastMessageTxt lastMessage) {

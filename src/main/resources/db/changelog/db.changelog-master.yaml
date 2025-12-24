@@ -47,3 +47,11 @@ databaseChangeLog:
         - sqlFile:
             path: ../sql/0006-create-indexes.sql
             relativeToChangelogFile: true
+  - changeSet:
+      id: 2025-12-24-unique-and-dedup
+      author: Andrey Fedotov
+      comment: deduplicate data and add unique indexes for high load safety
+      changes:
+        - sqlFile:
+            path: ../sql/0007-unique-and-dedup.sql
+            relativeToChangelogFile: true

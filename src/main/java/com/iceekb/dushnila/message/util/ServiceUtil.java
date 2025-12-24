@@ -110,7 +110,7 @@ public class ServiceUtil {
                         newReaction.getTextTo()
                 ));
 
-        log.info("Replace created <{} -> {}> for channel <{}> by user <{}>",
+        log.debug("Replace created <{} -> {}> for channel <{}> by user <{}>",
                 newReaction.getTextFrom(),
                 newReaction.getTextTo(),
                 lastMessage.getChannel().getChatName(),
@@ -128,7 +128,7 @@ public class ServiceUtil {
             try {
                 return ChatCommand.valueOf(commandStr);
             } catch (IllegalArgumentException e) {
-                log.error("Unknown command <{}>", commandStr);
+                log.debug("Unknown command <{}>", commandStr);
                 lastMessage.setResponse("Неизвестная команда");
                 lastMessage.setError(true);
             }
