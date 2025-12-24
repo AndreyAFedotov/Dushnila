@@ -18,6 +18,7 @@ import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,6 +54,7 @@ class MessagesServiceAdminMenuTest {
         );
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static Update personalTextUpdate(long userId, String text) {
         Update update = mock(Update.class);
         Message msg = mock(Message.class);
@@ -93,7 +95,7 @@ class MessagesServiceAdminMenuTest {
         assertNotNull(lm.getMenu());
         assertTrue(
                 lm.getMenu().getKeyboard().stream()
-                        .flatMap(row -> row.stream())
+                        .flatMap(Collection::stream)
                         .anyMatch(btn -> AdminCommand.DELETE_CHANNEL.getLabel().equals(btn.getText()))
         );
     }

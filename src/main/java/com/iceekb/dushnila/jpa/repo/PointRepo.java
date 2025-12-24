@@ -17,21 +17,6 @@ public interface PointRepo extends JpaRepository<Point, Long> {
             """)
     List<Point> findPointsForChannelId(Long id);
 
-    @Deprecated
-    @Query("""
-            SELECT p FROM Point p
-            WHERE p.channel.id = :channelId
-            AND p.user.id = :userId
-            """)
-    Point findPointsForChannelIdAndUserId(Long channelId, Long userId);
-
-    @Query("SELECT EXISTS (SELECT 1 FROM Point p WHERE p.channel.id = :channelId AND p.user.id = :userId)")
-    boolean existsByChatIdAndUserId(Long channelId, Long userId);
-
-    /**
-     * Атомарное начисление очка: одна строка на (channel_id, user_id) + инкремент без гонок.
-     * Требует уникального индекса/констрейнта на (channel_id, user_id).
-     */
     @SuppressWarnings("UnusedReturnValue")
     @Modifying
     @Query(value = """
@@ -42,6 +27,7 @@ public interface PointRepo extends JpaRepository<Point, Long> {
             """, nativeQuery = true)
     int incrementPoint(@Param("channelId") Long channelId, @Param("userId") Long userId);
 
+    @SuppressWarnings("UnusedReturnValue")
     @Modifying
     @Query("DELETE FROM Point p WHERE p.channel.id = :channelId")
     int deleteAllByChannelId(Long channelId);

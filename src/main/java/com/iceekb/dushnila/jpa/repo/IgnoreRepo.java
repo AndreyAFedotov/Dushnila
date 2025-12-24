@@ -20,12 +20,6 @@ public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
             """)
     Ignore findByWordAndChatId(String word, Long id);
 
-    @Deprecated
-    @Query("""
-            SELECT EXISTS (SELECT 1 FROM Ignore ig WHERE ig.word = :word AND ig.channel.tgId = :id)
-            """)
-    Boolean existsByWordAndChatId(String word, Long id);
-
     @Query("""
             SELECT ig FROM Ignore ig
             WHERE ig.channel.id = :channelId

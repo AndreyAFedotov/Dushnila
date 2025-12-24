@@ -1,11 +1,7 @@
 package com.iceekb.dushnila.service;
 
-import com.iceekb.dushnila.jpa.entity.Ignore;
-import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,41 +12,20 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * Фильтрация входящего сообщения от игнорируемых слов/фраз/масок + удаление @mentions.
- *
- * Формат игнора (Ignore.word):
- * - слово: без пробелов и без '*'/'?'
- * - фраза: содержит пробелы и без '*'/'?'
- * - маска (glob): содержит '*' или '?', может быть как "маской-слова", так и "маской-фразы"
- */
 @Service
 @RequiredArgsConstructor
 public class IgnoreFilterService {
-    private final IgnoreRepo ignoreRepo;
+    private final IgnoreRulesCacheService ignoreRulesCacheService;
 
-    /**
-     * Возвращает очищенный текст.
-     */
     public String filterMessage(Long chatId, String message) {
         if (chatId == null || StringUtils.isBlank(message)) {
             return "";
         }
-        IgnoreRules rules = getRules(chatId);
+        IgnoreRules rules = ignoreRulesCacheService.getRules(chatId);
         return rules.apply(message);
     }
 
-    @Cacheable(value = "ignoreRules", key = "#chatId")
-    @NotNull
-    protected IgnoreRules getRules(Long chatId) {
-        List<String> rawIgnores = ignoreRepo.findAllByChatId(chatId).stream()
-                .map(Ignore::getWord)
-                .filter(StringUtils::isNotBlank)
-                .toList();
-        return IgnoreRules.compile(rawIgnores);
-    }
-
-    static final class IgnoreRules {
+    public static final class IgnoreRules {
         private final Set<String> ignoredWords;              // точные слова (lower)
         private final List<Pattern> phrasePatterns;          // точные фразы
         private final List<Pattern> phraseMaskPatterns;      // маски по строке (в т.ч. "мама*анархия")
@@ -112,10 +87,8 @@ public class IgnoreFilterService {
         }
 
         String apply(String message) {
-            String normalizedMessage = normalizeMessage(message);
-
             // 1) Вырезаем фразы и маски по всей строке
-            String withoutPhrases = normalizedMessage;
+            String withoutPhrases = normalizeMessage(message);
             for (Pattern p : phrasePatterns) {
                 withoutPhrases = p.matcher(withoutPhrases).replaceAll(" ");
             }

@@ -12,8 +12,4 @@ public interface UserRepo extends JpaRepository<User, Long> {
             """)
     User findByTgId(Long userTgId);
 
-    @Query("""
-            SELECT EXISTS (SELECT 1 FROM User u WHERE u.tgId = :tgId)
-            """)
-    boolean existsByTgId(Long tgId);
 }

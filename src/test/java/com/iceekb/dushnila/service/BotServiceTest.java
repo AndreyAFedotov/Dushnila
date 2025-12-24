@@ -76,7 +76,7 @@ class BotServiceTest {
         Update update = mock(Update.class);
         when(update.hasCallbackQuery()).thenReturn(true);
 
-        LastMessageButton lm = LastMessageButton.builder().isValid(true).build();
+        LastMessageButton lm = mock(LastMessageButton.class);
         when(adminService.onUpdate(any(Update.class), any())).thenReturn(lm);
 
         LastMessage result = bot.getInstance(update);
@@ -104,7 +104,7 @@ class BotServiceTest {
         Update update = mock(Update.class);
         when(update.hasCallbackQuery()).thenReturn(false);
 
-        LastMessageTxt lm = LastMessageTxt.builder().isValid(true).build();
+        LastMessageTxt lm = mock(LastMessageTxt.class);
         when(messagesService.onUpdate(any(Update.class), any())).thenReturn(lm);
 
         LastMessage result = bot.getInstance(update);

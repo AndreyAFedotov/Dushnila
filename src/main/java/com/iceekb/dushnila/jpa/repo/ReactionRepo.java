@@ -32,10 +32,6 @@ public interface ReactionRepo extends JpaRepository<Reaction, Long> {
     @Cacheable(value = "reactions", key = "#id")
     List<Reaction> findAllByChannelId(Long id);
 
-    @Deprecated
-    @Query("SELECT EXISTS (SELECT 1 FROM Reaction r WHERE r.textFrom = :textFrom AND r.channel.tgId = :tgId)")
-    boolean existsByWordAndChatId(String textFrom, Long tgId);
-
     @SuppressWarnings("UnusedReturnValue")
     @Modifying
     @Query("DELETE FROM Reaction r WHERE r.channel.id = :channelId")

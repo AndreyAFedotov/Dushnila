@@ -17,15 +17,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * Выбор и применение реакций (слова/фразы) для входящего сообщения.
- *
- * Поведение намеренно повторяет прежний MessagesService#checkReaction, чтобы не было регрессий:
- * - единая нормализация (с сохранением значимости дефиса)
- * - фразовые реакции применяются до слов
- * - фразы "покрывают" символы, чтобы слова внутри фразы не срабатывали
- * - при конфликте фраз, нормализующихся в один ключ, выбирается "лучший" кандидат
- */
 @Service
 @RequiredArgsConstructor
 public class ReactionService {
@@ -73,9 +64,6 @@ public class ReactionService {
         StringJoiner result = new StringJoiner(". ");
 
         // Сначала обрабатываем фразы
-        // Если несколько фраз нормализуются в один ключ — выбираем "лучшее" совпадение:
-        // 1) точное совпадение по исходному тексту приоритетнее
-        // 2) иначе совпадение по нормализованному тексту
         //noinspection ClassCanBeRecord
         class PhraseCandidate {
             final String originalKey;

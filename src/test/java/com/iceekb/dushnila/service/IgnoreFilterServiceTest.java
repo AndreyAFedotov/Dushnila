@@ -18,7 +18,8 @@ class IgnoreFilterServiceTest {
     @Mock private IgnoreRepo ignoreRepo;
 
     private IgnoreFilterService createService() {
-        return new IgnoreFilterService(ignoreRepo);
+        IgnoreRulesCacheService cache = new IgnoreRulesCacheService(ignoreRepo);
+        return new IgnoreFilterService(cache);
     }
 
     @Test

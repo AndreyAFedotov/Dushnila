@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,7 +32,7 @@ class AutoResponseServiceTest {
             got.add(svc.getMessage(ResponseTypes.PUBLIC, 123L));
         }
         // Внутри одного "цикла" на канале ответы не должны повторяться (они удаляются из workingCopy)
-        assertTrue(got.size() == n);
+        assertEquals(got.size(), n);
 
         // После исчерпания список восстанавливается — следующий вызов должен отдать что-то не-null
         assertNotNull(svc.getMessage(ResponseTypes.PUBLIC, 123L));

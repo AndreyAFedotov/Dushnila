@@ -89,8 +89,6 @@ public class AdminService {
                 return;
             }
 
-            // Явно чистим связанные сущности (по требованию), затем удаляем сам канал.
-            // Порядок важен для БД без каскадов.
             ignoreRepo.deleteAllByChannelId(channelId);
             reactionRepo.deleteAllByChannelId(channelId);
             pointRepo.deleteAllByChannelId(channelId);

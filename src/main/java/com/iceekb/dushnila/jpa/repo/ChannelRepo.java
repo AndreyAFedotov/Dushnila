@@ -18,11 +18,6 @@ public interface ChannelRepo extends JpaRepository<Channel, Long> {
             """)
     Channel findByTgId(Long channelTgId);
 
-    @Query("""
-            SELECT EXISTS (SELECT 1 FROM Channel ch WHERE ch.tgId = :tgId)
-            """)
-    Boolean existsByTgId(Long tgId);
-
     @Query(value = "select ch from Channel ch where ch.approved in :approved")
     List<Channel> findByApproved(@Param("approved") List<ChannelApproved> approved);
 }
