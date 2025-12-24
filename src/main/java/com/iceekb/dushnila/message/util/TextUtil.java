@@ -15,8 +15,8 @@ public class TextUtil {
             /cignore - игнор слова (/cignore "слово")
             /dignore - удалить игнор (/dignore "слово")
             /lignore - список игнора
-            /creplace - замена (/creplace "слово" "на слово/фраза")
-            /dreplace - удалить замену (/dreplace "слово")
+            /creplace - замена (/creplace "слово/фраза" "на слово/фраза")
+            /dreplace - удалить замену (/dreplace "слово/фраза")
             /lreplace - список замены
             """;
 
