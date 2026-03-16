@@ -34,18 +34,23 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class MessagesService {
+    private static final Pattern URL_PATTERN = Pattern.compile(
+            "(?i)\\b(?:https?://\\S+|www\\.\\S+)"
+    );
     private final static List<AdminCommand> OK_COMMANDS = List.of(
             AdminCommand.APPROVE,
             AdminCommand.DAPPROVE,
             AdminCommand.DELETE_CHANNEL,
             AdminCommand.CHANNELS,
-            AdminCommand.UPTIME
+            AdminCommand.UPTIME,
+            AdminCommand.TIMEOUT
     );
 
     public static final String ERROR = "error";
@@ -166,12 +171,27 @@ public class MessagesService {
     }
 
     private void speller(LastMessageTxt lastMessage) {
+        String original = lastMessage.getReceivedMessage();
+        String cleaned = stripUrls(original);
+
+        if (StringUtils.isBlank(cleaned)) {
+            return;
+        }
+
+        lastMessage.setReceivedMessage(cleaned);
         spellerService.speller(lastMessage);
         if (StringUtils.isNotBlank(lastMessage.getResponse())) {
             // Важно: начисление очков делаем в отдельной короткой транзакции,
             // чтобы не держать транзакцию БД во время сетевого запроса к спеллеру.
             runInTx(() -> addPoint(lastMessage));
         }
+    }
+
+    private String stripUrls(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        return URL_PATTERN.matcher(text).replaceAll("").trim();
     }
 
     private void addPoint(LastMessageTxt lastMessage) {

@@ -23,10 +23,18 @@ spring:
     active: @spring.profiles.active@
 
 bot:
-  name: "BOT NICKNAME"
-  token: "BOT TOKEN"
-  admin: "BOT ADMIN TELEGRAM USER ID"
-  adminMail: "ADMIN EMAIL"
-  connectTimeout: 15
-  readTimeout: 15
-  writeTimeout: 15
+  main:
+    name: "BOT NICKNAME"
+    token: "BOT TOKEN"
+    admin: "BOT ADMIN TELEGRAM USER ID"
+    adminMail: "ADMIN EMAIL"
+    connectTimeout: 15
+    readTimeout: 15
+    writeTimeout: 15
+  proxy:
+    enabled: false
+    type: HTTP
+    host: proxy.com
+    port: 1234
+    user: user
+    password: password

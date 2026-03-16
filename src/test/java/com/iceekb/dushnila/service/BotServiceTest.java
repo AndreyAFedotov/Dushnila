@@ -3,10 +3,14 @@ package com.iceekb.dushnila.service;
 import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.properties.LastMessageButton;
 import com.iceekb.dushnila.properties.LastMessageTxt;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.telegram.telegrambots.meta.api.objects.Update;
+
+import java.net.Proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -19,17 +23,24 @@ class BotServiceTest {
 
     @Test
     void ctor_throwsOnEmptyToken() {
+        TelegramClient telegramClient = mock(TelegramClient.class);
         MessagesService messagesService = mock(MessagesService.class);
         AdminService adminService = mock(AdminService.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<BuildProperties> bp = (ObjectProvider<BuildProperties>) mock(ObjectProvider.class);
 
         assertThrows(IllegalArgumentException.class, () -> new BotService(
+                telegramClient,
                 " ",
                 "name",
                 "123",
                 "admin@example.com",
-                1, 1, 1,
+                false,
+                Proxy.Type.HTTP,
+                StringUtils.EMPTY,
+                0,
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
                 messagesService,
                 adminService,
                 bp
@@ -38,17 +49,24 @@ class BotServiceTest {
 
     @Test
     void ctor_throwsOnEmptyAdmin() {
+        TelegramClient telegramClient = mock(TelegramClient.class);
         MessagesService messagesService = mock(MessagesService.class);
         AdminService adminService = mock(AdminService.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<BuildProperties> bp = (ObjectProvider<BuildProperties>) mock(ObjectProvider.class);
 
         assertThrows(IllegalArgumentException.class, () -> new BotService(
+                telegramClient,
                 "123:ABC",
                 "name",
                 " ",
                 "admin@example.com",
-                1, 1, 1,
+                false,
+                Proxy.Type.HTTP,
+                StringUtils.EMPTY,
+                0,
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
                 messagesService,
                 adminService,
                 bp
@@ -57,17 +75,24 @@ class BotServiceTest {
 
     @Test
     void getInstance_routesToAdminOnCallbackQuery() {
+        TelegramClient telegramClient = mock(TelegramClient.class);
         MessagesService messagesService = mock(MessagesService.class);
         AdminService adminService = mock(AdminService.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<BuildProperties> bp = (ObjectProvider<BuildProperties>) mock(ObjectProvider.class);
 
         BotService bot = new BotService(
+                telegramClient,
                 "123:ABC",
                 "name",
                 "999",
                 "admin@example.com",
-                1, 1, 1,
+                false,
+                Proxy.Type.HTTP,
+                StringUtils.EMPTY,
+                0,
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
                 messagesService,
                 adminService,
                 bp
@@ -85,17 +110,24 @@ class BotServiceTest {
 
     @Test
     void getInstance_routesToMessagesOnNonCallback() {
+        TelegramClient telegramClient = mock(TelegramClient.class);
         MessagesService messagesService = mock(MessagesService.class);
         AdminService adminService = mock(AdminService.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<BuildProperties> bp = (ObjectProvider<BuildProperties>) mock(ObjectProvider.class);
 
         BotService bot = new BotService(
+                telegramClient,
                 "123:ABC",
                 "name",
                 "999",
                 "admin@example.com",
-                1, 1, 1,
+                false,
+                Proxy.Type.HTTP,
+                StringUtils.EMPTY,
+                0,
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
                 messagesService,
                 adminService,
                 bp
@@ -113,17 +145,24 @@ class BotServiceTest {
 
     @Test
     void getBotToken_returnsToken() {
+        TelegramClient telegramClient = mock(TelegramClient.class);
         MessagesService messagesService = mock(MessagesService.class);
         AdminService adminService = mock(AdminService.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<BuildProperties> bp = (ObjectProvider<BuildProperties>) mock(ObjectProvider.class);
 
         BotService bot = new BotService(
+                telegramClient,
                 "123:ABC",
                 "name",
                 "999",
                 "admin@example.com",
-                1, 1, 1,
+                false,
+                Proxy.Type.HTTP,
+                StringUtils.EMPTY,
+                0,
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
                 messagesService,
                 adminService,
                 bp

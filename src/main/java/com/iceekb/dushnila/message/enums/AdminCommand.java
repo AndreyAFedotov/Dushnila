@@ -12,7 +12,8 @@ public enum AdminCommand {
     DELETE_CHANNEL_ADD("Канал удалён"),
     CHANNELS("Список каналов"),
     UNKNOWN("Команда не опознана"),
-    UPTIME("Время работы");
+    UPTIME("Время работы"),
+    TIMEOUT("Таймауты getUpdates");
 
     private final String label;
 

@@ -6,6 +6,11 @@ import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import static ch.qos.logback.classic.Level.DEBUG;
 import static ch.qos.logback.classic.Level.ERROR;
 import static ch.qos.logback.classic.Level.TRACE;
@@ -14,13 +19,20 @@ import static ch.qos.logback.classic.Level.WARN;
 @Slf4j
 public class TelegramLogFilter extends Filter<ILoggingEvent> {
     private static final String TG_EVENT = "*** Telegram Event - ";
+    private static final String GET_UPDATES_RETRY = "Error received from Telegram GetUpdates Request, retrying";
 
+    @SuppressWarnings("LoggingSimilarMessage")
     @Override
     public FilterReply decide(ILoggingEvent event) {
         if (event.getLoggerName().contains("org.telegram")) {
             Level level = event.getLevel();
-            String textEvent = TG_EVENT + event.getFormattedMessage();
-            if (level.equals(ERROR)) {
+            String message = event.getFormattedMessage();
+            String textEvent = TG_EVENT + message;
+
+            if (message != null && message.contains(GET_UPDATES_RETRY)) {
+                trackGetUpdatesRetryAndMaybeReport(event.getTimeStamp());
+                return FilterReply.DENY;
+            } else if (level.equals(ERROR)) {
                 log.error(textEvent);
             } else if (level.equals(WARN)) {
                 log.warn(textEvent);
@@ -34,5 +46,19 @@ public class TelegramLogFilter extends Filter<ILoggingEvent> {
             return FilterReply.DENY;
         }
         return FilterReply.ACCEPT;
+    }
+
+    private void trackGetUpdatesRetryAndMaybeReport(long currentTimestampMs) {
+        LocalDateTime now = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimestampMs), ZoneId.systemDefault());
+
+        GetUpdatesRetryStats.add(now);
+
+        LocalDateTime first = GetUpdatesRetryStats.getFirstTime();
+        if (first != null && Duration.between(first, now).toHours() >= 24) {
+            int count = GetUpdatesRetryStats.getCount();
+            log.error("{}There were {} timeout getUpdates errors (proxy/network) during the day.", TG_EVENT, count);
+            GetUpdatesRetryStats.clear();
+            GetUpdatesRetryStats.add(now);
+        }
     }
 }

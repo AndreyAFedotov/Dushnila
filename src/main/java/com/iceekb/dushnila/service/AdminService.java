@@ -8,6 +8,7 @@ import com.iceekb.dushnila.message.enums.ChannelApproved;
 import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.properties.BaseBotProperties;
+import com.iceekb.dushnila.properties.GetUpdatesRetryStats;
 import com.iceekb.dushnila.properties.LastMessageButton;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,6 +54,7 @@ public class AdminService {
         switch (getCommand(msg)) {
             case CHANNELS -> getChannelsList(lastMessage);
             case UPTIME -> getUptime(lastMessage, properties);
+            case TIMEOUT -> getTimeoutStats(lastMessage);
             case APPROVE -> getApprovedListByStatus(
                     lastMessage,
                     List.of(ChannelApproved.WAITING, ChannelApproved.REJECTED),
@@ -154,6 +157,17 @@ public class AdminService {
         Duration uptime = Duration.between(properties.getStartTime(), LocalDateTime.now());
         String uptimeStr = setUptimeLine(uptime);
         lastMessage.setResponse(uptimeStr);
+    }
+
+    private void getTimeoutStats(LastMessageButton lastMessage) {
+        int count = GetUpdatesRetryStats.getCount();
+        LocalDateTime first = GetUpdatesRetryStats.getFirstTime();
+        if (first == null) {
+            lastMessage.setResponse("Ошибок getUpdates (таймаут/ретрай) пока не было.");
+            return;
+        }
+        String since = first.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+        lastMessage.setResponse(String.format("Накоплено ошибок getUpdates: %d, начиная с %s", count, since));
     }
 
     private String setUptimeLine(Duration uptime) {

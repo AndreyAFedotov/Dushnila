@@ -5,13 +5,11 @@ import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.properties.LastMessageButton;
 import com.iceekb.dushnila.properties.LastMessageTxt;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.AfterBotRegistration;
@@ -24,9 +22,9 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.net.Proxy;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -40,16 +38,21 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
     private final BaseBotProperties properties;
     private final ObjectProvider<BuildProperties> buildPropertiesProvider;
 
-    public BotService(@Value("${bot.token}") String token,
-                      @Value("${bot.name}") String name,
-                      @Value("${bot.admin}") String admin,
-                      @Value("${bot.adminMail}") String adminMail,
-                      @Value("${bot.connectTimeout}") Integer connectTimeout,
-                      @Value("${bot.readTimeout}") Integer readTimeout,
-                      @Value("${bot.writeTimeout}") Integer writeTimeout,
+    public BotService(TelegramClient telegramClient,
+                      @Value("${bot.main.token}") String token,
+                      @Value("${bot.main.name}") String name,
+                      @Value("${bot.main.admin}") String admin,
+                      @Value("${bot.main.adminMail}") String adminMail,
+                      @Value("${bot.proxy.enabled}") Boolean proxyEnabled,
+                      @Value("${bot.proxy.type}") Proxy.Type proxyType,
+                      @Value("${bot.proxy.host}") String proxyHost,
+                      @Value("${bot.proxy.port}") Integer proxyPort,
+                      @Value("${bot.proxy.user}") String proxyUser,
+                      @Value("${bot.proxy.password}") String proxyPassword,
                       MessagesService messagesService,
                       AdminService adminService,
                       ObjectProvider<BuildProperties> buildPropertiesProvider) {
+        this.telegramClient = telegramClient;
         this.messagesService = messagesService;
         this.adminService = adminService;
         this.botToken = token;
@@ -62,19 +65,15 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
         if (admin == null || admin.trim().isEmpty()) {
             throw new IllegalArgumentException("Bot admin ID cannot be null or empty");
         }
-
-        var client = new OkHttpClient.Builder()
-                .connectTimeout(connectTimeout, TimeUnit.SECONDS)
-                .readTimeout(readTimeout, TimeUnit.SECONDS)
-                .writeTimeout(writeTimeout, TimeUnit.SECONDS)
-                .build();
-
-        this.telegramClient = new OkHttpTelegramClient(client, token);
         this.properties = BaseBotProperties.builder()
                 .botToken(token)
                 .botName(name)
                 .botAdmin(admin)
                 .adminMail(adminMail)
+                .proxyEnabled(proxyEnabled)
+                .proxyType(proxyType)
+                .proxyHost(proxyHost)
+                .proxyPort(proxyPort)
                 .startTime(LocalDateTime.now())
                 .build();
     }
@@ -164,6 +163,13 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
         log.info("Bot session running state: {}", botSession.isRunning());
         log.info("Bot token: {}", botToken != null ? "SET" : "NOT SET");
         log.info("Bot admin ID: {}", properties.getBotAdmin());
+
+        if (properties.getProxyEnabled()) {
+            log.info("Bot proxy enabled");
+            log.info("Bot proxy type: {}", properties.getProxyType());
+            log.info("Bot proxy host: {}", properties.getProxyHost());
+            log.info("Bot proxy port: {}", properties.getProxyPort());
+        }
 
         try {
             if (botSession.isRunning()) {
