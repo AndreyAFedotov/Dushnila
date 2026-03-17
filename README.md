@@ -40,4 +40,16 @@ bot:
   adminMail: "ADMIN EMAIL"
 ```
 
+* Так же умеет работать через прокси (HTTP or SOCKS), если активировать
+
+``` yaml
+  proxy:
+    enabled: false
+    type: HTTP
+    host: proxy.com
+    port: 1234
+    user: user
+    password: password
+```
+
 P.S. Это просто проект "just for fun" :)
