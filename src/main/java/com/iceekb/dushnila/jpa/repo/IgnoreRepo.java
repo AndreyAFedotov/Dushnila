@@ -11,6 +11,7 @@ import org.springframework.lang.NonNull;
 
 import java.util.List;
 
+@SuppressWarnings("deprecation")
 public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
 
     @Query("""

@@ -10,6 +10,7 @@ import org.springframework.lang.NonNull;
 
 import java.util.List;
 
+@SuppressWarnings("deprecation")
 public interface ReactionRepo extends JpaRepository<Reaction, Long> {
 
     @Query("""

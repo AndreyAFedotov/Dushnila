@@ -19,6 +19,11 @@ import java.util.concurrent.TimeUnit;
 public class TelegramBotConfig {
 
     @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
+
+    @Bean
     public OkHttpClient telegramOkHttpClient(@Value("${bot.main.connectTimeout}") Integer connectTimeout,
                                              @Value("${bot.main.readTimeout}") Integer readTimeout,
                                              @Value("${bot.main.writeTimeout}") Integer writeTimeout,
@@ -65,8 +70,9 @@ public class TelegramBotConfig {
     }
 
     @Bean
-    public TelegramBotsLongPollingApplication telegramBotsApplication(OkHttpClient telegramOkHttpClient) {
-        return new TelegramBotsLongPollingApplication(ObjectMapper::new, () -> telegramOkHttpClient);
+    public TelegramBotsLongPollingApplication telegramBotsApplication(OkHttpClient telegramOkHttpClient,
+                                                                      ObjectMapper objectMapper) {
+        return new TelegramBotsLongPollingApplication(() -> objectMapper, () -> telegramOkHttpClient);
     }
 }
 

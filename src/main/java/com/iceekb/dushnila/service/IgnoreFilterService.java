@@ -129,7 +129,7 @@ public class IgnoreFilterService {
                     compact.add(t);
                     continue;
                 }
-                boolean hasLeft = !compact.isEmpty() && !"-".equals(compact.get(compact.size() - 1));
+                boolean hasLeft = !compact.isEmpty() && !"-".equals(compact.getLast());
                 boolean hasRight = (i + 1) < tokens.size() && !"-".equals(tokens.get(i + 1));
                 if (hasLeft && hasRight) {
                     compact.add(t);

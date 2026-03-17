@@ -6,7 +6,6 @@ import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,8 +29,8 @@ public class TelegramLogFilter extends Filter<ILoggingEvent> {
             String textEvent = TG_EVENT + message;
 
             if (message != null && message.contains(GET_UPDATES_RETRY)) {
-                trackGetUpdatesRetryAndMaybeReport(event.getTimeStamp());
-                return FilterReply.DENY;
+                trackGetUpdates(event.getTimeStamp());
+                log.error(textEvent);
             } else if (level.equals(ERROR)) {
                 log.error(textEvent);
             } else if (level.equals(WARN)) {
@@ -48,17 +47,8 @@ public class TelegramLogFilter extends Filter<ILoggingEvent> {
         return FilterReply.ACCEPT;
     }
 
-    private void trackGetUpdatesRetryAndMaybeReport(long currentTimestampMs) {
+    private void trackGetUpdates(long currentTimestampMs) {
         LocalDateTime now = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimestampMs), ZoneId.systemDefault());
-
         GetUpdatesRetryStats.add(now);
-
-        LocalDateTime first = GetUpdatesRetryStats.getFirstTime();
-        if (first != null && Duration.between(first, now).toHours() >= 24) {
-            int count = GetUpdatesRetryStats.getCount();
-            log.error("{}There were {} timeout getUpdates errors (proxy/network) during the day.", TG_EVENT, count);
-            GetUpdatesRetryStats.clear();
-            GetUpdatesRetryStats.add(now);
-        }
     }
 }

@@ -74,6 +74,8 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
                 .proxyType(proxyType)
                 .proxyHost(proxyHost)
                 .proxyPort(proxyPort)
+                .proxyUser(proxyUser)
+                .proxyPassword(proxyPassword)
                 .startTime(LocalDateTime.now())
                 .build();
     }

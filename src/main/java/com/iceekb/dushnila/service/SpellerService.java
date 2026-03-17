@@ -139,7 +139,7 @@ public class SpellerService {
                 .filter(word -> word.getS() != null && !word.getS().isEmpty())
                 .collect(Collectors.toMap(
                         SpellerIncomingDataWord::getWord,
-                        word -> word.getS().get(0),
+                        word -> word.getS().getFirst(),
                         (existingValue, newValue) -> existingValue
                 ));
     }
@@ -188,7 +188,7 @@ public class SpellerService {
             if (word.getS() == null || word.getS().isEmpty()) {
                 continue;
             }
-            if (!word.getWord().equals(word.getS().get(0))) {
+            if (!word.getWord().equals(word.getS().getFirst())) {
                 result.add(word);
             }
         }

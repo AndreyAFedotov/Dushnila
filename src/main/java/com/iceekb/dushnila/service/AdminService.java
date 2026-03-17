@@ -185,7 +185,7 @@ public class AdminService {
         } catch (IllegalArgumentException e) {
             try {
                 List<String> commands = Arrays.asList(command.split("#:#"));
-                return AdminCommand.valueOf(commands.get(0).toUpperCase());
+                return AdminCommand.valueOf(commands.getFirst().toUpperCase());
             } catch (IllegalArgumentException e1) {
                 log.error("Invalid admin command: {}", command);
                 return AdminCommand.UNKNOWN;

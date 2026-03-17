@@ -28,9 +28,9 @@ bot:
     token: "BOT TOKEN"
     admin: "BOT ADMIN TELEGRAM USER ID"
     adminMail: "ADMIN EMAIL"
-    connectTimeout: 15
-    readTimeout: 15
-    writeTimeout: 15
+    connectTimeout: 30
+    readTimeout: 90
+    writeTimeout: 30
   proxy:
     enabled: false
     type: HTTP

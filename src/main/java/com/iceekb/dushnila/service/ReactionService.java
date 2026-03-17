@@ -123,7 +123,7 @@ public class ReactionService {
                 ));
 
         wordMap.forEach((word, value) -> {
-            // Важно: \b в Java по умолчанию плохо работает с кириллицей (без UNICODE_CHARACTER_CLASS),
+            // Важно: \b в Java по умолчанию плохо работает с кириллицей,
             // поэтому используем Unicode-границы "не буква/цифра/_" вокруг слова.
             String pattern = "(?iu)(?<![\\p{L}\\p{N}_])" + Pattern.quote(word) + "(?![\\p{L}\\p{N}_])";
             Pattern compiledPattern = Pattern.compile(pattern);

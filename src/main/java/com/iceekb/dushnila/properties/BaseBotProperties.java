@@ -20,4 +20,6 @@ public class BaseBotProperties {
     private Proxy.Type proxyType;
     private String proxyHost;
     private Integer proxyPort;
+    private String proxyUser;
+    private String proxyPassword;
 }
