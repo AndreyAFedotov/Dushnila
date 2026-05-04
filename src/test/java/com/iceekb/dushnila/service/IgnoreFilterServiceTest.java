@@ -152,6 +152,32 @@ class IgnoreFilterServiceTest {
         String result = service.filterMessage(1L, "_цчу_ОбработкаТочечныйРасчетПоказателей");
         assertEquals("", result);
     }
+
+    @Test
+    void stripsHttpUrlsBeforeNormalization_emptyWhenOnlyLink() {
+        IgnoreFilterService service = createService();
+        when(ignoreRepo.findAllByChatId(1L)).thenReturn(List.of());
+
+        String url = "https://pikabu.ru/story/x?utm_source=andpostshare";
+        assertEquals("", service.filterMessage(1L, url));
+    }
+
+    @Test
+    void stripsUrlsBeforeNormalization_keepsSurroundingText() {
+        IgnoreFilterService service = createService();
+        when(ignoreRepo.findAllByChatId(1L)).thenReturn(List.of());
+
+        String url = "https://pikabu.ru/story/x?utm_source=andpostshare";
+        assertEquals("смотри", service.filterMessage(1L, "смотри " + url));
+    }
+
+    @Test
+    void stripsWwwUrlsBeforeNormalization() {
+        IgnoreFilterService service = createService();
+        when(ignoreRepo.findAllByChatId(1L)).thenReturn(List.of());
+
+        assertEquals("", service.filterMessage(1L, "www.example.com/path?q=1"));
+    }
 }
 
 

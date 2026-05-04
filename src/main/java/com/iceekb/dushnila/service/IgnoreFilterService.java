@@ -15,7 +15,18 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class IgnoreFilterService {
+    private static final Pattern URL_PATTERN = Pattern.compile(
+            "(?i)\\b(?:https?://\\S+|www\\.\\S+)"
+    );
+
     private final IgnoreRulesCacheService ignoreRulesCacheService;
+
+    private static String stripUrls(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        return URL_PATTERN.matcher(text).replaceAll("").trim();
+    }
 
     public String filterMessage(Long chatId, String message) {
         if (chatId == null || StringUtils.isBlank(message)) {
@@ -87,8 +98,12 @@ public class IgnoreFilterService {
         }
 
         String apply(String message) {
+            String withoutUrls = stripUrls(message);
+            if (StringUtils.isBlank(withoutUrls)) {
+                return "";
+            }
             // 1) Вырезаем фразы и маски по всей строке
-            String withoutPhrases = normalizeMessage(message);
+            String withoutPhrases = normalizeMessage(withoutUrls);
             for (Pattern p : phrasePatterns) {
                 withoutPhrases = p.matcher(withoutPhrases).replaceAll(" ");
             }
@@ -129,7 +144,8 @@ public class IgnoreFilterService {
                     compact.add(t);
                     continue;
                 }
-                boolean hasLeft = !compact.isEmpty() && !"-".equals(compact.getLast());
+                boolean hasLeft = !compact.isEmpty()
+                        && !"-".equals(compact.getLast());
                 boolean hasRight = (i + 1) < tokens.size() && !"-".equals(tokens.get(i + 1));
                 if (hasLeft && hasRight) {
                     compact.add(t);
