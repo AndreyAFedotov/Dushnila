@@ -12,6 +12,7 @@ public interface PointRepo extends JpaRepository<Point, Long> {
 
     @Query("""
             SELECT p FROM Point p
+            JOIN FETCH p.user
             WHERE p.channel.id = :id
             ORDER BY p.pointCount DESC
             """)

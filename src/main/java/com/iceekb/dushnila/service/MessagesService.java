@@ -1,15 +1,11 @@
 package com.iceekb.dushnila.service;
 
-import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.Ignore;
 import com.iceekb.dushnila.jpa.entity.Point;
 import com.iceekb.dushnila.jpa.entity.Reaction;
-import com.iceekb.dushnila.jpa.entity.User;
-import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import com.iceekb.dushnila.jpa.repo.PointRepo;
 import com.iceekb.dushnila.jpa.repo.ReactionRepo;
-import com.iceekb.dushnila.jpa.repo.UserRepo;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.message.enums.ChatCommand;
 import com.iceekb.dushnila.message.enums.MessageValidationError;
@@ -20,11 +16,8 @@ import com.iceekb.dushnila.properties.BaseBotProperties;
 import com.iceekb.dushnila.properties.LastMessageTxt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -54,8 +47,8 @@ public class MessagesService {
     public static final String TO = "to";
     public static final String FROM = "from";
 
-    private final ChannelRepo channelRepo;
-    private final UserRepo userRepo;
+    private static final int STAT_LIMIT = 15;
+
     private final PointRepo pointRepo;
     private final ReactionRepo reactionRepo;
     private final IgnoreRepo ignoreRepo;
@@ -63,23 +56,8 @@ public class MessagesService {
     private final ReactionService reactionService;
     private final SpellerService spellerService;
     private final AutoResponseService responseService;
-    private final PlatformTransactionManager transactionManager;
-
-    private TransactionTemplate tx;
-
-    @PostConstruct
-    void initTx() {
-        this.tx = new TransactionTemplate(transactionManager);
-    }
-
-    private void runInTx(Runnable action) {
-        // Защита для unit-тестов/нестандартных окружений: если tx не инициализирован, выполняем напрямую.
-        if (tx == null) {
-            action.run();
-            return;
-        }
-        tx.executeWithoutResult(status -> action.run());
-    }
+    private final AccessService accessService;
+    private final PointService pointService;
 
     public LastMessageTxt onUpdate(Update update, BaseBotProperties properties) {
         LastMessageTxt lastMessage = new LastMessageTxt(update, properties);
@@ -120,10 +98,10 @@ public class MessagesService {
         try {
             if (isPingPong(lastMessage)) return;
 
-            runInTx(() -> checkMessageAccess(lastMessage));
+            accessService.checkMessageAccess(lastMessage);
             if (shouldReturn(lastMessage)) return;
 
-            runInTx(() -> checkCommands(lastMessage));
+            checkCommands(lastMessage);
             if (shouldReturn(lastMessage)) return;
 
             lastMessage.setReceivedMessage(
@@ -169,39 +147,11 @@ public class MessagesService {
     private void speller(LastMessageTxt lastMessage) {
         spellerService.speller(lastMessage);
         if (StringUtils.isNotBlank(lastMessage.getResponse())) {
-            // Важно: начисление очков делаем в отдельной короткой транзакции,
-            // чтобы не держать транзакцию БД во время сетевого запроса к спеллеру.
-            runInTx(() -> addPoint(lastMessage));
+            pointService.addPoint(
+                    lastMessage.getChannel().getId(),
+                    lastMessage.getUser().getId()
+            );
         }
-    }
-
-    private void addPoint(LastMessageTxt lastMessage) {
-        pointRepo.incrementPoint(
-                lastMessage.getChannel().getId(),
-                lastMessage.getUser().getId()
-        );
-    }
-
-    private void checkMessageAccess(LastMessageTxt lastMessage) {
-        // Channel
-        Channel channelResult = retrieveOrCreateChannel(lastMessage);
-        channelRepo.save(channelResult);
-        // User
-        if (!lastMessage.isError()) {
-            User user = retrieveOrCreateUser(lastMessage);
-            userRepo.save(user);
-        }
-    }
-
-    private Channel retrieveOrCreateChannel(LastMessageTxt lastMessage) {
-        Long channelTgId = ServiceUtil.checkChannelTgId(lastMessage.getChannelTgId());
-        Channel channel = channelRepo.findByTgId(channelTgId);
-        return (channel == null) ? ServiceUtil.createNewChannel(lastMessage) : ServiceUtil.channelAnalysis(channel, lastMessage);
-    }
-
-    private User retrieveOrCreateUser(LastMessageTxt lastMessage) {
-        User user = userRepo.findByTgId(lastMessage.getUserTgId());
-        return (user == null) ? ServiceUtil.createNewUser(lastMessage) : ServiceUtil.userAnalysis(user, lastMessage);
     }
 
     private void checkCommands(LastMessageTxt lastMessage) {
@@ -347,8 +297,12 @@ public class MessagesService {
             stb.append("Наши чемпионы (ошибок): \n\n");
             int count = 0;
             for (Point point : points) {
+                if (count >= STAT_LIMIT) break;
                 stb.append(++count).append(". ").append("@");
                 stb.append(point.getUser().getNickName()).append(": ").append(point.getPointCount()).append("\n");
+            }
+            if (points.size() > STAT_LIMIT) {
+                stb.append("…и ещё ").append(points.size() - STAT_LIMIT);
             }
             lastMessage.setResponse(stb.toString());
         }

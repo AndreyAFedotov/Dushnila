@@ -16,7 +16,7 @@ public interface IgnoreRepo extends JpaRepository<Ignore, Long> {
 
     @Query("""
             SELECT ig FROM Ignore ig
-            WHERE ig.word = :word
+            WHERE lower(ig.word) = lower(:word)
             AND ig.channel.id = :id
             """)
     Ignore findByWordAndChatId(String word, Long id);

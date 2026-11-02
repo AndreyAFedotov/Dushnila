@@ -2,7 +2,6 @@ package com.iceekb.dushnila.service;
 
 import com.iceekb.dushnila.TestUtils;
 import com.iceekb.dushnila.jpa.entity.Reaction;
-import com.iceekb.dushnila.jpa.repo.ReactionRepo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,10 +16,14 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ReactionServiceTest extends TestUtils {
 
-    @Mock private ReactionRepo reactionRepo;
+    @Mock private ReactionRulesCacheService rulesCacheService;
 
     private ReactionService createService() {
-        return new ReactionService(reactionRepo);
+        return new ReactionService(rulesCacheService);
+    }
+
+    private void stubRules(Long channelId, List<Reaction> reactions) {
+        when(rulesCacheService.getRules(channelId)).thenReturn(ReactionRules.compile(reactions));
     }
 
     @Test
@@ -29,7 +32,7 @@ class ReactionServiceTest extends TestUtils {
 
         Reaction phrase = Reaction.builder().textFrom("Очень плохо").textTo("PHRASE").build();
         Reaction word = Reaction.builder().textFrom("плохо").textTo("WORD").build();
-        when(reactionRepo.findAllByChannelId(1L)).thenReturn(List.of(phrase, word));
+        stubRules(1L, List.of(phrase, word));
 
         var msg = createMessage();
         msg.getChannel().setId(1L);
@@ -47,7 +50,7 @@ class ReactionServiceTest extends TestUtils {
 
         Reaction phrasePlain = Reaction.builder().textFrom("мама анархия").textTo("PLAIN").build();
         Reaction phraseDash = Reaction.builder().textFrom("мама - анархия").textTo("DASH").build();
-        when(reactionRepo.findAllByChannelId(1L)).thenReturn(List.of(phrasePlain, phraseDash));
+        stubRules(1L, List.of(phrasePlain, phraseDash));
 
         var msg1 = createMessage();
         msg1.getChannel().setId(1L);
@@ -76,7 +79,7 @@ class ReactionServiceTest extends TestUtils {
         ReactionService service = createService();
 
         Reaction cat = Reaction.builder().textFrom("кот").textTo("CAT").build();
-        when(reactionRepo.findAllByChannelId(1L)).thenReturn(List.of(cat));
+        stubRules(1L, List.of(cat));
 
         var msg1 = createMessage();
         msg1.getChannel().setId(1L);
@@ -93,5 +96,3 @@ class ReactionServiceTest extends TestUtils {
         assertEquals("CAT", msg2.getResponse());
     }
 }
-
-

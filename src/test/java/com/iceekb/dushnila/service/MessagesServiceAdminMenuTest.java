@@ -1,10 +1,8 @@
 package com.iceekb.dushnila.service;
 
-import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import com.iceekb.dushnila.jpa.repo.PointRepo;
 import com.iceekb.dushnila.jpa.repo.ReactionRepo;
-import com.iceekb.dushnila.jpa.repo.UserRepo;
 import com.iceekb.dushnila.message.enums.AdminCommand;
 import com.iceekb.dushnila.properties.BaseBotProperties;
 import com.iceekb.dushnila.properties.LastMessageTxt;
@@ -12,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -28,8 +25,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MessagesServiceAdminMenuTest {
 
-    @Mock private ChannelRepo channelRepo;
-    @Mock private UserRepo userRepo;
     @Mock private PointRepo pointRepo;
     @Mock private ReactionRepo reactionRepo;
     @Mock private IgnoreRepo ignoreRepo;
@@ -37,12 +32,11 @@ class MessagesServiceAdminMenuTest {
     @Mock private ReactionService reactionService;
     @Mock private SpellerService spellerService;
     @Mock private AutoResponseService responseService;
-    @Mock private PlatformTransactionManager transactionManager;
+    @Mock private AccessService accessService;
+    @Mock private PointService pointService;
 
     private MessagesService createService() {
         return new MessagesService(
-                channelRepo,
-                userRepo,
                 pointRepo,
                 reactionRepo,
                 ignoreRepo,
@@ -50,7 +44,8 @@ class MessagesServiceAdminMenuTest {
                 reactionService,
                 spellerService,
                 responseService,
-                transactionManager
+                accessService,
+                pointService
         );
     }
 

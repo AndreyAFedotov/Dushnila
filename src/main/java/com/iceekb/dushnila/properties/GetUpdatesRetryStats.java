@@ -1,35 +1,37 @@
 package com.iceekb.dushnila.properties;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Счётчики ошибок getUpdates.
+ * Хранит только количество и время первой ошибки — без накопления timestamps в памяти.
+ */
 public final class GetUpdatesRetryStats {
 
-    private static final Set<LocalDateTime> timestamps = Collections.synchronizedSet(new HashSet<>());
+    private static final AtomicLong count = new AtomicLong();
+    private static final AtomicReference<LocalDateTime> firstTime = new AtomicReference<>();
 
     private GetUpdatesRetryStats() {
     }
 
     public static void add(LocalDateTime time) {
-        timestamps.add(time);
+        count.incrementAndGet();
+        firstTime.updateAndGet(current -> (current == null || time.isBefore(current)) ? time : current);
     }
 
     @SuppressWarnings("unused")
     public static void clear() {
-        timestamps.clear();
+        count.set(0);
+        firstTime.set(null);
     }
 
-    public static int getCount() {
-        synchronized (timestamps) {
-            return timestamps.size();
-        }
+    public static long getCount() {
+        return count.get();
     }
 
     public static LocalDateTime getFirstTime() {
-        synchronized (timestamps) {
-            return timestamps.isEmpty() ? null : Collections.min(timestamps);
-        }
+        return firstTime.get();
     }
 }

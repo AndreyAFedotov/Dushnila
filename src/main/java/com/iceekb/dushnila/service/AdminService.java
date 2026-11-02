@@ -160,7 +160,7 @@ public class AdminService {
     }
 
     private void getTimeoutStats(LastMessageButton lastMessage) {
-        int count = GetUpdatesRetryStats.getCount();
+        long count = GetUpdatesRetryStats.getCount();
         LocalDateTime first = GetUpdatesRetryStats.getFirstTime();
         if (first == null) {
             lastMessage.setResponse("Ошибок getUpdates (таймаут/ретрай) пока не было.");

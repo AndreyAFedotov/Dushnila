@@ -6,19 +6,19 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.3</version>
+		<version>4.0.7</version>
 		<relativePath/>
 	</parent>
 
 	<groupId>com.iceekb</groupId>
 	<artifactId>dushnila</artifactId>
-	<version>0.8.3</version>
+	<version>0.8.5</version>
 	<name>Dushnila</name>
 	<description>Another Telegram bot</description>
 
 	<properties>
 		<java.version>21</java.version>
-		<org.telegram.version>9.5.0</org.telegram.version>
+		<org.telegram.version>10.3.0</org.telegram.version>
 		<commons-lang3>3.18.0</commons-lang3>
 		<lombok.version>1.18.32</lombok.version>
 		<hibernate-jpamodelgen.version>7.2.4.Final</hibernate-jpamodelgen.version>

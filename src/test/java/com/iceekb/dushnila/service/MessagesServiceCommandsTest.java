@@ -4,11 +4,9 @@ import com.iceekb.dushnila.jpa.entity.Channel;
 import com.iceekb.dushnila.jpa.entity.Ignore;
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import com.iceekb.dushnila.jpa.entity.User;
-import com.iceekb.dushnila.jpa.repo.ChannelRepo;
 import com.iceekb.dushnila.jpa.repo.IgnoreRepo;
 import com.iceekb.dushnila.jpa.repo.PointRepo;
 import com.iceekb.dushnila.jpa.repo.ReactionRepo;
-import com.iceekb.dushnila.jpa.repo.UserRepo;
 import com.iceekb.dushnila.message.enums.ChannelApproved;
 import com.iceekb.dushnila.properties.BaseBotProperties;
 import com.iceekb.dushnila.properties.LastMessageTxt;
@@ -17,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chat.Chat;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
@@ -30,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,8 +37,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MessagesServiceCommandsTest {
 
-    @Mock private ChannelRepo channelRepo;
-    @Mock private UserRepo userRepo;
     @Mock private PointRepo pointRepo;
     @Mock private ReactionRepo reactionRepo;
     @Mock private IgnoreRepo ignoreRepo;
@@ -48,7 +44,8 @@ class MessagesServiceCommandsTest {
     @Mock private ReactionService reactionService;
     @Mock private SpellerService spellerService;
     @Mock private AutoResponseService responseService;
-    @Mock private PlatformTransactionManager transactionManager;
+    @Mock private AccessService accessService;
+    @Mock private PointService pointService;
 
     private MessagesService service;
     private BaseBotProperties props;
@@ -58,8 +55,6 @@ class MessagesServiceCommandsTest {
     @BeforeEach
     void setUp() {
         service = new MessagesService(
-                channelRepo,
-                userRepo,
                 pointRepo,
                 reactionRepo,
                 ignoreRepo,
@@ -67,7 +62,8 @@ class MessagesServiceCommandsTest {
                 reactionService,
                 spellerService,
                 responseService,
-                transactionManager
+                accessService,
+                pointService
         );
 
         props = BaseBotProperties.builder()
@@ -94,8 +90,13 @@ class MessagesServiceCommandsTest {
                 .lastMessage(LocalDateTime.now())
                 .build();
 
-        when(channelRepo.findByTgId(anyLong())).thenReturn(channel);
-        when(userRepo.findByTgId(anyLong())).thenReturn(user);
+        // Регистрация канала/пользователя теперь в AccessService — подставляем их в сообщение
+        doAnswer(invocation -> {
+            LastMessageTxt lm = invocation.getArgument(0);
+            lm.setChannel(channel);
+            lm.setUser(user);
+            return null;
+        }).when(accessService).checkMessageAccess(any(LastMessageTxt.class));
     }
 
     private static Update textUpdate(long chatId, long userId, String chatTitle, String text, int messageId) {

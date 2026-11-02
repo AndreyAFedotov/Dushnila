@@ -1,13 +1,14 @@
 package com.iceekb.dushnila.service;
 
 import com.iceekb.dushnila.properties.BaseBotProperties;
+import com.iceekb.dushnila.properties.BotProperties;
 import com.iceekb.dushnila.properties.LastMessage;
 import com.iceekb.dushnila.properties.LastMessageButton;
 import com.iceekb.dushnila.properties.LastMessageTxt;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.longpolling.BotSession;
@@ -22,62 +23,76 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import java.net.Proxy;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Component
 public class BotService implements SpringLongPollingBot, LongPollingUpdateConsumer {
 
     private static final String START_MESSAGE = "The bot has been successfully launched!";
+
+    /**
+     * Количество рабочих потоков обработки апдейтов.
+     * Апдейты одного чата всегда попадают в один поток (полоса по chatId),
+     * поэтому порядок сообщений внутри чата сохраняется, а медленный спеллер
+     * в одном чате не тормозит остальные.
+     */
+    private static final int WORKERS = 8;
+
     private final TelegramClient telegramClient;
     private final MessagesService messagesService;
     private final AdminService adminService;
     private final String botToken;
     private final BaseBotProperties properties;
     private final ObjectProvider<BuildProperties> buildPropertiesProvider;
+    private final List<ExecutorService> workers;
 
     public BotService(TelegramClient telegramClient,
-                      @Value("${bot.main.token}") String token,
-                      @Value("${bot.main.name}") String name,
-                      @Value("${bot.main.admin}") String admin,
-                      @Value("${bot.main.adminMail}") String adminMail,
-                      @Value("${bot.proxy.enabled}") Boolean proxyEnabled,
-                      @Value("${bot.proxy.type}") Proxy.Type proxyType,
-                      @Value("${bot.proxy.host}") String proxyHost,
-                      @Value("${bot.proxy.port}") Integer proxyPort,
-                      @Value("${bot.proxy.user}") String proxyUser,
-                      @Value("${bot.proxy.password}") String proxyPassword,
+                      BotProperties botProperties,
                       MessagesService messagesService,
                       AdminService adminService,
                       ObjectProvider<BuildProperties> buildPropertiesProvider) {
         this.telegramClient = telegramClient;
         this.messagesService = messagesService;
         this.adminService = adminService;
-        this.botToken = token;
+        this.botToken = botProperties.getMain().getToken();
         this.buildPropertiesProvider = buildPropertiesProvider;
 
         // Валидация параметров
-        if (token == null || token.trim().isEmpty()) {
+        if (botToken == null || botToken.trim().isEmpty()) {
             throw new IllegalArgumentException("Bot token cannot be null or empty");
         }
+        String admin = botProperties.getMain().getAdmin();
         if (admin == null || admin.trim().isEmpty()) {
             throw new IllegalArgumentException("Bot admin ID cannot be null or empty");
         }
+
+        BotProperties.ProxyProps proxy = botProperties.getProxy();
         this.properties = BaseBotProperties.builder()
-                .botToken(token)
-                .botName(name)
+                .botToken(botToken)
+                .botName(botProperties.getMain().getName())
                 .botAdmin(admin)
-                .adminMail(adminMail)
-                .proxyEnabled(proxyEnabled)
-                .proxyType(proxyType)
-                .proxyHost(proxyHost)
-                .proxyPort(proxyPort)
-                .proxyUser(proxyUser)
-                .proxyPassword(proxyPassword)
+                .adminMail(botProperties.getMain().getAdminMail())
+                .proxyEnabled(proxy.getEnabled())
+                .proxyType(proxy.getType())
+                .proxyHost(proxy.getHost())
+                .proxyPort(proxy.getPort())
+                .proxyUser(proxy.getUser())
+                .proxyPassword(proxy.getPassword())
                 .startTime(LocalDateTime.now())
                 .build();
+
+        this.workers = IntStream.range(0, WORKERS)
+                .mapToObj(i -> Executors.newSingleThreadExecutor(runnable -> {
+                    Thread thread = new Thread(runnable, "dushnila-update-" + i);
+                    thread.setDaemon(true);
+                    return thread;
+                }))
+                .toList();
     }
 
     private String startupMessageForAdmin() {
@@ -98,44 +113,29 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
             log.error(e.getMessage());
         }
 
-        if (lastMessage.getMenu() == null) {
-            try {
-                telegramClient.executeAsync(SendMessage.builder()
-                        .chatId(lastMessage.getChannelTgId())
-                        .replyToMessageId(lastMessage.getMessageId())
-                        .text(lastMessage.getResponse())
-                        .build());
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-            }
-        } else {
-            try {
-                telegramClient.executeAsync(SendMessage.builder()
-                        .chatId(lastMessage.getChannelTgId())
-                        .replyToMessageId(lastMessage.getMessageId())
-                        .text(lastMessage.getResponse())
-                        .replyMarkup(lastMessage.getMenu())
-                        .build());
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-            }
+        SendMessage.SendMessageBuilder<?, ?> messageBuilder = SendMessage.builder()
+                .chatId(lastMessage.getChannelTgId())
+                .replyToMessageId(lastMessage.getMessageId())
+                .text(lastMessage.getResponse());
+        if (lastMessage.getMenu() != null) {
+            messageBuilder.replyMarkup(lastMessage.getMenu());
+        }
+        try {
+            telegramClient.executeAsync(messageBuilder.build());
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
         }
     }
 
     private void sendMessageButton(LastMessageButton lastMessage) {
         try {
+            SendMessage.SendMessageBuilder<?, ?> messageBuilder = SendMessage.builder()
+                    .chatId(lastMessage.getChannelTgId())
+                    .text(lastMessage.getResponse());
             if (lastMessage.getMenu() != null) {
-                telegramClient.executeAsync(SendMessage.builder()
-                        .chatId(lastMessage.getChannelTgId())
-                        .text(lastMessage.getResponse())
-                        .replyMarkup(lastMessage.getMenu())
-                        .build());
-            } else {
-                telegramClient.executeAsync(SendMessage.builder()
-                        .chatId(lastMessage.getChannelTgId())
-                        .text(lastMessage.getResponse())
-                        .build());
+                messageBuilder.replyMarkup(lastMessage.getMenu());
             }
+            telegramClient.executeAsync(messageBuilder.build());
 
             // Отвечаем на callbackQuery, чтобы убрать анимацию загрузки
             if (lastMessage.getQuery() != null) {
@@ -203,27 +203,55 @@ public class BotService implements SpringLongPollingBot, LongPollingUpdateConsum
 
     @Override
     public void consume(List<Update> list) {
-        list.forEach(update -> {
-            LastMessage lm = getInstance(update);
-
-            if (lm instanceof LastMessageTxt lastMessage) {
-                if (StringUtils.isNotBlank(lastMessage.getResponse())) {
-                    sendMessageTxt(lastMessage);
-                } else if (!lastMessage.isValid()) {
-                    lastMessage.getValidationErrors().forEach(
-                            t -> log.warn("Message validation error: <{}> for channel <{}>",
-                                    t.getLabel(),
-                                    lastMessage.getChannelName()));
-                }
-            } else if (lm instanceof LastMessageButton lastMessageB) {
-                if (lastMessageB.getMenu() != null || lastMessageB.getResponse() != null) {
-                    sendMessageButton(lastMessageB);
-                } else if (!lastMessageB.isValid()) {
-                    lastMessageB.getValidationErrors().forEach(
-                            t -> log.warn("Button message validation error: <{}>",
-                                    t.getLabel()));
-                }
+        // Апдейты обрабатываются асинхронно: polling-поток не блокируется
+        // на сетевых вызовах спеллера и запросах к БД.
+        list.forEach(update -> workerFor(update).submit(() -> {
+            try {
+                processUpdate(update);
+            } catch (Exception e) {
+                log.error("Update processing failed: {}", e.getMessage(), e);
             }
-        });
+        }));
+    }
+
+    private ExecutorService workerFor(Update update) {
+        Long chatId = null;
+        if (update.hasMessage() && update.getMessage() != null) {
+            chatId = update.getMessage().getChatId();
+        } else if (update.hasCallbackQuery()
+                && update.getCallbackQuery() != null
+                && update.getCallbackQuery().getMessage() != null) {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        }
+        int stripe = (int) Math.floorMod(chatId == null ? 0L : chatId, WORKERS);
+        return workers.get(stripe);
+    }
+
+    private void processUpdate(Update update) {
+        LastMessage lm = getInstance(update);
+
+        if (lm instanceof LastMessageTxt lastMessage) {
+            if (StringUtils.isNotBlank(lastMessage.getResponse())) {
+                sendMessageTxt(lastMessage);
+            } else if (!lastMessage.isValid()) {
+                lastMessage.getValidationErrors().forEach(
+                        t -> log.warn("Message validation error: <{}> for channel <{}>",
+                                t.getLabel(),
+                                lastMessage.getChannelName()));
+            }
+        } else if (lm instanceof LastMessageButton lastMessageB) {
+            if (lastMessageB.getMenu() != null || lastMessageB.getResponse() != null) {
+                sendMessageButton(lastMessageB);
+            } else if (!lastMessageB.isValid()) {
+                lastMessageB.getValidationErrors().forEach(
+                        t -> log.warn("Button message validation error: <{}>",
+                                t.getLabel()));
+            }
+        }
+    }
+
+    @PreDestroy
+    void shutdown() {
+        workers.forEach(ExecutorService::shutdown);
     }
 }

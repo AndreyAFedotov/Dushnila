@@ -1,5 +1,6 @@
 package com.iceekb.dushnila.service;
 
+import com.iceekb.dushnila.message.util.TextNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -8,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -53,20 +53,8 @@ public class IgnoreFilterService {
         }
 
         static IgnoreRules compile(List<String> rawIgnores) {
-            Function<String, String> ignoreNormalizer = s -> {
-                if (s == null) return "";
-                return s.toLowerCase()
-                        .replaceAll("\\p{Pd}+", "-")
-                        // удаляем пунктуацию, КРОМЕ @, '_', '-', '*', '?'
-                        // '_' (underscore) является Unicode-пунктуацией (Pc), но для наших кейсов он значим.
-                        .replaceAll("[\\p{P}&&[^@*?_\\-]]", StringUtils.SPACE)
-                        .replaceAll("\\s*-\\s*", " - ")
-                        .replaceAll("\\s+", StringUtils.SPACE)
-                        .trim();
-            };
-
             List<String> normalized = rawIgnores.stream()
-                    .map(ignoreNormalizer)
+                    .map(TextNormalizer::forIgnoreRule)
                     .filter(StringUtils::isNotBlank)
                     .toList();
 
@@ -103,7 +91,7 @@ public class IgnoreFilterService {
                 return "";
             }
             // 1) Вырезаем фразы и маски по всей строке
-            String withoutPhrases = normalizeMessage(withoutUrls);
+            String withoutPhrases = TextNormalizer.forIgnoreMessage(withoutUrls);
             for (Pattern p : phrasePatterns) {
                 withoutPhrases = p.matcher(withoutPhrases).replaceAll(" ");
             }
@@ -123,17 +111,6 @@ public class IgnoreFilterService {
             // 3) Убираем "сиротские" дефисы
             List<String> compact = dropOrphanHyphens(tokens);
             return String.join(StringUtils.SPACE, compact).trim();
-        }
-
-        private static String normalizeMessage(String s) {
-            if (s == null) return "";
-            return s
-                    .replaceAll("\\p{Pd}+", "-")
-                    // '_' оставляем значимым (см. ignoreNormalizer)
-                    .replaceAll("[\\p{P}&&[^@_\\-]]", StringUtils.SPACE)
-                    .replaceAll("\\s*-\\s*", " - ")
-                    .replaceAll("\\s+", StringUtils.SPACE)
-                    .trim();
         }
 
         private static List<String> dropOrphanHyphens(List<String> tokens) {

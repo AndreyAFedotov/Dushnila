@@ -23,7 +23,7 @@ public class StartupInfoLoggerService implements ApplicationRunner {
             log.info("Starting application (version: unknown)");
             return;
         }
-        log.info("{} v{} successfully sarted!", bp.getName(), bp.getVersion());
+        log.info("{} v{} successfully started!", bp.getName(), bp.getVersion());
     }
 }
 

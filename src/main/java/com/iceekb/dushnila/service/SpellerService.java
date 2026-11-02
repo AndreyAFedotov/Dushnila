@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iceekb.dushnila.message.dto.SpellerIncomingDataWord;
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import com.iceekb.dushnila.properties.LastMessageTxt;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +27,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@Data
 public class SpellerService {
 
     private static final Integer ERROR_WORDS_LIMIT = 5;
@@ -37,10 +35,10 @@ public class SpellerService {
     private static final Integer CONNECTION_TIMEOUT = 5;
     private static final Integer READ_TIMEOUT = 5;
 
-    private WebClient webClient;
-    private TransCharReplaceService transCR;
-    private ObjectMapper objectMapper;
-    private AutoResponseService autoResponseService;
+    private final WebClient webClient;
+    private final TransCharReplaceService transCR;
+    private final ObjectMapper objectMapper;
+    private final AutoResponseService autoResponseService;
 
     public SpellerService(TransCharReplaceService transCR, ObjectMapper objectMapper, AutoResponseService autoResponseService) {
         this.transCR = transCR;
@@ -70,7 +68,7 @@ public class SpellerService {
             Map<String, String> pairs = extractPairs(data);
 
             if (!pairs.isEmpty()) {
-                handlePossibleTransposition(lastMessage, message, pairs, transCR);
+                handlePossibleTransposition(lastMessage, message, pairs);
             }
             if (lastMessage.getResponse() != null && !lastMessage.getResponse().isEmpty()) {
                 return lastMessage;
@@ -146,8 +144,7 @@ public class SpellerService {
 
     private void handlePossibleTransposition(LastMessageTxt lastMessage,
                                              String message,
-                                             Map<String, String> pairs,
-                                             TransCharReplaceService transCR) {
+                                             Map<String, String> pairs) {
         if (transCR.isTrans(pairs)) {
             lastMessage.setResponse("Я помогу... \"" + transCR.modifyTransString(message) + "\"");
         }

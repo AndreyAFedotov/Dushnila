@@ -1,10 +1,10 @@
 package com.iceekb.dushnila.config;
 
+import com.iceekb.dushnila.properties.BotProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
@@ -24,35 +24,28 @@ public class TelegramBotConfig {
     }
 
     @Bean
-    public OkHttpClient telegramOkHttpClient(@Value("${bot.main.connectTimeout}") Integer connectTimeout,
-                                             @Value("${bot.main.readTimeout}") Integer readTimeout,
-                                             @Value("${bot.main.writeTimeout}") Integer writeTimeout,
-                                             @Value("${bot.proxy.enabled}") Boolean proxyEnabled,
-                                             @Value("${bot.proxy.type}") Proxy.Type proxyType,
-                                             @Value("${bot.proxy.host}") String proxyHost,
-                                             @Value("${bot.proxy.port}") Integer proxyPort,
-                                             @Value("${bot.proxy.user}") String proxyUser,
-                                             @Value("${bot.proxy.password}") String proxyPassword) {
-
+    public OkHttpClient telegramOkHttpClient(BotProperties botProperties) {
+        BotProperties.Main main = botProperties.getMain();
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .connectTimeout(connectTimeout, TimeUnit.SECONDS)
-                .readTimeout(readTimeout, TimeUnit.SECONDS)
-                .writeTimeout(writeTimeout, TimeUnit.SECONDS);
+                .connectTimeout(main.getConnectTimeout(), TimeUnit.SECONDS)
+                .readTimeout(main.getReadTimeout(), TimeUnit.SECONDS)
+                .writeTimeout(main.getWriteTimeout(), TimeUnit.SECONDS);
 
-        if (proxyEnabled != null && proxyEnabled) {
-            if (!StringUtils.isNotBlank(proxyHost) || proxyPort == null) {
+        BotProperties.ProxyProps proxyProps = botProperties.getProxy();
+        if (proxyProps.getEnabled() != null && proxyProps.getEnabled()) {
+            if (!StringUtils.isNotBlank(proxyProps.getHost()) || proxyProps.getPort() == null) {
                 throw new IllegalArgumentException("Add proxy host and port");
             }
 
             Proxy proxy = new Proxy(
-                    proxyType,
-                    new InetSocketAddress(proxyHost.trim(), proxyPort)
+                    proxyProps.getType(),
+                    new InetSocketAddress(proxyProps.getHost().trim(), proxyProps.getPort())
             );
             builder.proxy(proxy);
 
-            if (StringUtils.isNotBlank(proxyUser) && StringUtils.isNotBlank(proxyPassword)) {
+            if (StringUtils.isNotBlank(proxyProps.getUser()) && StringUtils.isNotBlank(proxyProps.getPassword())) {
                 builder.proxyAuthenticator((route, response) -> {
-                    String credential = Credentials.basic(proxyUser, proxyPassword);
+                    String credential = Credentials.basic(proxyProps.getUser(), proxyProps.getPassword());
                     return response.request().newBuilder()
                             .header("Proxy-Authorization", credential)
                             .build();
@@ -65,8 +58,8 @@ public class TelegramBotConfig {
 
     @Bean
     public TelegramClient telegramClient(OkHttpClient telegramOkHttpClient,
-                                         @Value("${bot.main.token}") String token) {
-        return new OkHttpTelegramClient(telegramOkHttpClient, token);
+                                         BotProperties botProperties) {
+        return new OkHttpTelegramClient(telegramOkHttpClient, botProperties.getMain().getToken());
     }
 
     @Bean
@@ -75,4 +68,3 @@ public class TelegramBotConfig {
         return new TelegramBotsLongPollingApplication(() -> objectMapper, () -> telegramOkHttpClient);
     }
 }
-

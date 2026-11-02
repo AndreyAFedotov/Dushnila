@@ -2,7 +2,6 @@ package com.iceekb.dushnila.jpa.repo;
 
 import com.iceekb.dushnila.jpa.entity.Reaction;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,7 +14,7 @@ public interface ReactionRepo extends JpaRepository<Reaction, Long> {
 
     @Query("""
             SELECT r FROM Reaction r
-            WHERE r.textFrom = :textFrom
+            WHERE lower(r.textFrom) = lower(:textFrom)
             AND r.channel.id = :id
             """)
     Reaction findByTextFromAndChanelId(String textFrom, Long id);
@@ -30,26 +29,25 @@ public interface ReactionRepo extends JpaRepository<Reaction, Long> {
                 SELECT r FROM Reaction r
                 WHERE r.channel.id = :id
             """)
-    @Cacheable(value = "reactions", key = "#id")
     List<Reaction> findAllByChannelId(Long id);
 
     @SuppressWarnings("UnusedReturnValue")
     @Modifying
     @Query("DELETE FROM Reaction r WHERE r.channel.id = :channelId")
-    @CacheEvict(value = "reactions", allEntries = true)
+    @CacheEvict(value = "reactionRules", allEntries = true)
     int deleteAllByChannelId(Long channelId);
 
-    // Переопределяем методы для автоматической очистки кэша
+    // Переопределяем методы для автоматической очистки кэша скомпилированных правил
     @Override
-    @CacheEvict(value = "reactions", key = "#result.channel.id")
+    @CacheEvict(value = "reactionRules", key = "#result.channel.id")
     @NonNull
     <S extends Reaction> S save(@NonNull S entity);
 
     @Override
-    @CacheEvict(value = "reactions", key = "#entity.channel.id")
+    @CacheEvict(value = "reactionRules", key = "#entity.channel.id")
     void delete(@NonNull Reaction entity);
 
     @Override
-    @CacheEvict(value = "reactions", allEntries = true)
+    @CacheEvict(value = "reactionRules", allEntries = true)
     void deleteById(@NonNull Long id);
 }

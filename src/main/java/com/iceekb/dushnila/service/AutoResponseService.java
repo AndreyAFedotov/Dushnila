@@ -2,7 +2,6 @@ package com.iceekb.dushnila.service;
 
 import com.iceekb.dushnila.message.enums.ResponseTypes;
 import jakarta.annotation.PostConstruct;
-import lombok.Data;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-@Data
 public class AutoResponseService {
 
     public static final List<String> PUBLIC_DATA = List.of(
@@ -45,6 +43,11 @@ public class AutoResponseService {
     public void init() {
         responsesCache.put(ResponseTypes.PUBLIC, PUBLIC_DATA);
         responsesCache.put(ResponseTypes.PERSONAL, PERSONAL_DATA);
+    }
+
+    // Видимость для тестов: контроль размера кэша каналов
+    Map<Long, Map<ResponseTypes, List<String>>> getChannelResponses() {
+        return channelResponses;
     }
 
     public String getMessage(ResponseTypes responseType, Long channelId) {
